@@ -12,9 +12,9 @@ import {
   orderBy,
   addDoc,
   Timestamp,
-  serverTimestamp
+  serverTimestamp,
+  getCountFromServer
 } from "firebase/firestore";
-import { products as staticProducts } from "@/data/products";
 import { db } from "@/lib/firebase";
 
 // --- TYPE DEFINITIONS ---
@@ -45,46 +45,52 @@ export interface Order {
   createdAt: any;
 }
 
+export interface Promotion {
+  id: string;
+  code: string;
+  discountPercent: number;
+  discountFlat: number;
+  maxUses: number;
+  usedCount: number;
+  active: boolean;
+  expiresAt: any;
+  createdAt: any;
+}
+
 // --- DATA SERVICE HUB ---
 
 export const dataService = {
   
-  // 1. PRODUCTS COLLECTION
+  // 1. PRODUCTS COLLECTION (Firestore only — no static fallback)
   products: {
-    async getAll(pageSize: number = 50): Promise<Product[]> {
-      try {
-        const q = query(collection(db, "products"), orderBy("createdAt", "desc"), limit(pageSize));
-        const snap = await getDocs(q);
-        if (snap.docs.length > 0) return snap.docs.map(d => ({ id: d.id, ...d.data() } as Product));
-      } catch { /* fall through to static */ }
-      return staticProducts as Product[];
+    async getAll(pageSize: number = 100): Promise<Product[]> {
+      const q = query(collection(db, "products"), orderBy("createdAt", "desc"), limit(pageSize));
+      const snap = await getDocs(q);
+      return snap.docs.map(d => ({ id: d.id, ...d.data() } as Product));
     },
     async getByCategory(category: string, pageSize: number = 50): Promise<Product[]> {
-      try {
-        const q = query(
-          collection(db, "products"), 
-          where("category", "==", category),
-          orderBy("createdAt", "desc"),
-          limit(pageSize)
-        );
-        const snap = await getDocs(q);
-        if (snap.docs.length > 0) return snap.docs.map(d => ({ id: d.id, ...d.data() } as Product));
-      } catch { /* fall through to static */ }
-      return (staticProducts as Product[]).filter(p => p.category === category);
+      const q = query(
+        collection(db, "products"), 
+        where("category", "==", category),
+        orderBy("createdAt", "desc"),
+        limit(pageSize)
+      );
+      const snap = await getDocs(q);
+      return snap.docs.map(d => ({ id: d.id, ...d.data() } as Product));
     },
     async searchProducts(searchTerm: string, pageSize: number = 10): Promise<Product[]> {
-      try {
-        const q = query(
-          collection(db, "products"),
-          where("name", ">=", searchTerm),
-          where("name", "<=", searchTerm + "\uf8ff"),
-          limit(pageSize)
-        );
-        const snap = await getDocs(q);
-        if (snap.docs.length > 0) return snap.docs.map(d => ({ id: d.id, ...d.data() } as Product));
-      } catch { /* fall through to static */ }
+      const q = query(
+        collection(db, "products"),
+        where("name", ">=", searchTerm),
+        where("name", "<=", searchTerm + "\uf8ff"),
+        limit(pageSize)
+      );
+      const snap = await getDocs(q);
+      if (snap.docs.length > 0) return snap.docs.map(d => ({ id: d.id, ...d.data() } as Product));
+      // Broad client-side fallback from full collection
+      const all = await this.getAll();
       const term = searchTerm.toLowerCase();
-      return (staticProducts as Product[]).filter(p =>
+      return all.filter(p =>
         p.name.toLowerCase().includes(term) ||
         p.category.toLowerCase().includes(term) ||
         p.subCategory?.toLowerCase().includes(term) ||
@@ -99,13 +105,10 @@ export const dataService = {
       });
     },
     async getById(id: string) {
-      try {
-        const ref = doc(db, "products", id);
-        const snap = await getDoc(ref);
-        if (snap.exists()) return { id: snap.id, ...snap.data() } as Product;
-      } catch { /* fall through to static */ }
-      // Fallback to static mock data
-      return (staticProducts as Product[]).find(p => p.id === id) ?? null;
+      const ref = doc(db, "products", id);
+      const snap = await getDoc(ref);
+      if (snap.exists()) return { id: snap.id, ...snap.data() } as Product;
+      return null;
     },
     async update(id: string, updates: Partial<Product>) {
       const ref = doc(db, "products", id);
@@ -128,10 +131,14 @@ export const dataService = {
     },
     async delete(id: string) {
       return await deleteDoc(doc(db, "products", id));
+    },
+    async count(): Promise<number> {
+      const snap = await getCountFromServer(collection(db, "products"));
+      return snap.data().count;
     }
   },
 
-  // 2. USERS COLLECTION (Profile Management)
+  // 2. USERS COLLECTION
   users: {
     async createProfile(uid: string, profile: Partial<UserProfile>) {
       const ref = doc(db, "users", uid);
@@ -150,6 +157,15 @@ export const dataService = {
     async getProfile(uid: string): Promise<UserProfile | null> {
       const snap = await getDoc(doc(db, "users", uid));
       return snap.exists() ? (snap.data() as UserProfile) : null;
+    },
+    async getAll(pageSize: number = 100): Promise<UserProfile[]> {
+      const q = query(collection(db, "users"), orderBy("createdAt", "desc"), limit(pageSize));
+      const snap = await getDocs(q);
+      return snap.docs.map(d => ({ uid: d.id, ...d.data() } as UserProfile));
+    },
+    async updateRole(uid: string, role: 'admin' | 'user' | 'vip') {
+      const ref = doc(db, "users", uid);
+      return await updateDoc(ref, { role });
     }
   },
 
@@ -170,9 +186,18 @@ export const dataService = {
       const snap = await getDocs(q);
       return snap.docs.map(d => ({ id: d.id, ...d.data() } as Order));
     },
+    async getAll(pageSize: number = 100): Promise<Order[]> {
+      const q = query(collection(db, "orders"), orderBy("createdAt", "desc"), limit(pageSize));
+      const snap = await getDocs(q);
+      return snap.docs.map(d => ({ id: d.id, ...d.data() } as Order));
+    },
     async updateStatus(orderId: string, status: string) {
       const ref = doc(db, "orders", orderId);
       return await updateDoc(ref, { status, updatedAt: serverTimestamp() });
+    },
+    async updateTracking(orderId: string, trackingNumber: string) {
+      const ref = doc(db, "orders", orderId);
+      return await updateDoc(ref, { trackingNumber, updatedAt: serverTimestamp() });
     }
   },
 
@@ -190,6 +215,38 @@ export const dataService = {
       const ref = doc(db, "carts", userId);
       const snap = await getDoc(ref);
       return snap.exists() ? snap.data().items || [] : [];
+    }
+  },
+
+  // 5. PROMOTIONS COLLECTION
+  promotions: {
+    async getAll(): Promise<Promotion[]> {
+      const q = query(collection(db, "promotions"), orderBy("createdAt", "desc"));
+      const snap = await getDocs(q);
+      return snap.docs.map(d => ({ id: d.id, ...d.data() } as Promotion));
+    },
+    async create(promo: Omit<Promotion, 'id' | 'createdAt'>) {
+      return await addDoc(collection(db, "promotions"), {
+        ...promo,
+        createdAt: serverTimestamp()
+      });
+    },
+    async toggle(id: string, active: boolean) {
+      return await updateDoc(doc(db, "promotions", id), { active });
+    },
+    async delete(id: string) {
+      return await deleteDoc(doc(db, "promotions", id));
+    }
+  },
+
+  // 6. SETTINGS (single doc)
+  settings: {
+    async get() {
+      const snap = await getDoc(doc(db, "config", "store"));
+      return snap.exists() ? snap.data() : { storeName: "LYRA", supportEmail: "" };
+    },
+    async update(data: any) {
+      return await setDoc(doc(db, "config", "store"), { ...data, updatedAt: serverTimestamp() }, { merge: true });
     }
   }
 };

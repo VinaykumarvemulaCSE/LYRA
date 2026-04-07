@@ -3,20 +3,28 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // 👗 PRODUCTS: Everyone can browse
-    // Only the Admin can edit full details, but we allow authenticated users 
-    // to update ONLY if they are doing a stock decrement (part of checkout)
+    // Helper: is the caller an admin?
+    // Uses email-based check to match the frontend Admin.tsx guard.
+    // This avoids needing Firebase Admin SDK to set custom claims.
+    function isAdmin() {
+      return request.auth != null && request.auth.token.email == 'kumarvinay072007@gmail.com';
+    }
+
+    // 👗 PRODUCTS: Everyone can browse, admin can full CRUD
+    // Authenticated users can update only variants+updatedAt (stock decrement during checkout)
     match /products/{productId} {
       allow read: if true;
-      allow write: if request.auth != null && (
-        request.auth.token.admin == true ||
+      allow create, delete: if isAdmin();
+      allow update: if request.auth != null && (
+        isAdmin() ||
         (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['variants', 'updatedAt']))
       );
     }
     
-    // 👤 USERS: Users can only see/edit their OWN profile
+    // 👤 USERS: Users can read/write their OWN profile. Admin can read ALL + update any.
     match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read: if request.auth != null && (request.auth.uid == userId || isAdmin());
+      allow write: if request.auth != null && (request.auth.uid == userId || isAdmin());
     }
     
     // 🛒 CARTS: Users can manage their own persistent shopping bag
@@ -24,21 +32,37 @@ service cloud.firestore {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
     
-    // 📦 ORDERS: Users can place orders and see their OWN history
+    // 📦 ORDERS: Users can create + read own. Admin can read ALL + update any.
     match /orders/{orderId} {
-      allow read: if request.auth != null && (resource == null || resource.data.userId == request.auth.uid);
-      allow create: if request.auth != null;
-      // Allow user to update their own order status during checkout flow
-      allow update: if request.auth != null && (
-        request.auth.token.admin == true ||
-        (resource.data.userId == request.auth.uid)
+      allow read: if request.auth != null && (
+        isAdmin() ||
+        resource == null ||
+        resource.data.userId == request.auth.uid
       );
+      allow create: if request.auth != null;
+      allow update: if request.auth != null && (
+        isAdmin() ||
+        resource.data.userId == request.auth.uid
+      );
+      allow delete: if isAdmin();
     }
 
     // 🏆 REVIEWS: Everyone can read, authenticated users can write their own
     match /reviews/{reviewId} {
       allow read: if true;
       allow create: if request.auth != null;
+    }
+
+    // 🏷️ PROMOTIONS: Admin full CRUD. Authenticated users can read (checkout validation).
+    match /promotions/{promoId} {
+      allow read: if request.auth != null;
+      allow write: if isAdmin();
+    }
+
+    // ⚙️ CONFIG/SETTINGS: Anyone can read store config. Admin-only write.
+    match /config/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
     }
   }
 }

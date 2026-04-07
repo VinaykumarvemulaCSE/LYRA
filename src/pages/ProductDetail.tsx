@@ -12,6 +12,7 @@ import { useCart } from "@/context/CartContext";
 import ProductCard from "@/components/product/ProductCard";
 import ProductReviews from "@/components/product/ProductReviews";
 import { Analytics } from "@/lib/analytics";
+import { Helmet } from "react-helmet-async";
 import { toast } from "sonner";
 
 export default function ProductDetail() {
@@ -107,7 +108,20 @@ export default function ProductDetail() {
   };
 
   return (
-    <main className="pt-24 min-h-screen">
+    <>
+      <Helmet>
+        <title>{product.name} | LYRA Style Hub</title>
+        <meta name="description" content={product.description || `Shop the ${product.name} at LYRA. High-quality fashion luxury.`} />
+        <meta property="og:title" content={`${product.name} | LYRA`} />
+        <meta property="og:description" content={product.description || `Shop the ${product.name} at LYRA. High-quality fashion luxury.`} />
+        <meta property="og:image" content={allImages[0]} />
+        <meta property="og:url" content={window.location.href} />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={product.name} />
+        <meta name="twitter:description" content={product.description || `Discover ${product.name} at LYRA`} />
+        <meta name="twitter:image" content={allImages[0]} />
+      </Helmet>
+      <main className="pt-24 min-h-screen">
       <div className="container py-6">
         <Link to="/shop" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary transition-colors font-medium">
           <ArrowLeft className="w-4 h-4" /> Back to Shop
@@ -397,5 +411,6 @@ export default function ProductDetail() {
         </section>
       )}
     </main>
+    </>
   );
 }

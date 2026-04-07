@@ -17,14 +17,14 @@ This document outlines the required backend architecture and API integrations ne
 - [ ] **Inventory Tracking:** Track stock levels per size/color variant and prevent checkout if an item is out of stock.
 
 ## 3. Cart & Order Processing
-- [ ] **Persistent Cart:** Sync the local React Context cart to Firestore (for logged-in users) or localStorage (for guests) so users don't lose items when refreshing.
-- [ ] **Order Generation:** Create a secure backend endpoint (via Firebase Cloud Functions) to generate unique Order IDs and store order details in an `orders` collection.
-- [ ] **Order Status Flow:** Implement order state management (Pending, Paid, Shipped, Delivered) and reflect this in the user's "My Orders" area.
+- [x] **Persistent Cart:** Sync the local React Context cart to Firestore (for logged-in users) or localStorage (for guests) so users don't lose items when refreshing.
+- [x] **Order Generation:** Create a secure backend endpoint (via Vercel Serverless Functions) to generate unique Order IDs and store order details in an `orders` collection.
+- [x] **Order Status Flow:** Implement order state management (Pending, Paid, Shipped, Delivered) and reflect this in the user's "My Orders" area.
 
 ## 4. Payment Gateway (Razorpay Integration)
-- [ ] **Secure Order Creation API:** Create a Cloud Function to securely generate a Razorpay Order ID on the backend using the total checkout value.
-- [ ] **Frontend Integration:** Integrate the Razorpay Checkout JS script in `Checkout.tsx`.
-- [ ] **Webhook Listener:** Create a backend endpoint to listen for Razorpay webhooks (`payment.captured`, `payment.failed`) to securely update the order status in Firestore, preventing client-side spoofing.
+- [x] **Secure Order Creation API:** Create a Vercel Serverless Function to securely generate a Razorpay Order ID on the backend using the total checkout value.
+- [x] **Frontend Integration:** Integrate the Razorpay Checkout JS script in `Checkout.tsx`.
+- [x] **Webhook Listener / Signature Verification:** Create a backend endpoint to verify Razorpay signatures and captured payments to securely update the order status in Firestore.
 - [ ] **Automated Invoicing:** Automatically generate and email invoices to the user upon successful payment.
 
 ## 5. Admin Panel (Secured Routes)

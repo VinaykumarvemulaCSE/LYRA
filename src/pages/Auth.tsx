@@ -191,6 +191,13 @@ export default function Auth() {
           if (name) {
             await updateProfile(userCredential.user, { displayName: name });
           }
+          
+          // --- NEW: TRIGGER WELCOME EMAIL ---
+          fetch("/api/welcome-email", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email: identifier, firstName: name || "there" })
+          }).catch(err => console.warn("Welcome email failed to dispatch:", err));
         }
       } else if (step === "otp") {
         if (!confirmationResult) throw new Error("Verification process expired. Please try again.");

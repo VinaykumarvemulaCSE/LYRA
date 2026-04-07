@@ -26,8 +26,40 @@ export default function Checkout() {
     phone: user?.phoneNumber || "+91 98765 43210"
   });
 
+  const [promoCodeInput, setPromoCodeInput] = useState("");
+  const [appliedPromo, setAppliedPromo] = useState<any>(null);
+  const [isApplyingPromo, setIsApplyingPromo] = useState(false);
+
   const shipping = total > 15000 ? 0 : 500;
-  const grandTotal = total + shipping;
+  
+  // Calculate potential discount
+  const discountAmount = appliedPromo 
+    ? (appliedPromo.discountFlat > 0 ? appliedPromo.discountFlat : (total * (appliedPromo.discountPercent / 100))) 
+    : 0;
+    
+  const grandTotal = Math.max(0, total + shipping - discountAmount);
+
+  const handleApplyPromo = async () => {
+    if (!promoCodeInput) return;
+    setIsApplyingPromo(true);
+    setErrorMsg("");
+    try {
+      const promos = await dataService.promotions.getAll();
+      const validPromo = promos.find(p => p.code.toLowerCase() === promoCodeInput.toLowerCase() && p.active);
+      
+      if (!validPromo) {
+        toast.error("Invalid Promo Code", { description: "This code does not exist or has expired." });
+        setAppliedPromo(null);
+      } else {
+        setAppliedPromo(validPromo);
+        toast.success("Promo Applied!", { description: `You unlocked a discount.` });
+      }
+    } catch (err) {
+      toast.error("Failed to verify code");
+    } finally {
+      setIsApplyingPromo(false);
+    }
+  };
 
   const loadRazorpayScript = () => {
     return new Promise((resolve) => {
@@ -70,6 +102,9 @@ export default function Checkout() {
         userId: user.uid,
         items: items,
         totalAmount: grandTotal,
+        subTotal: total,
+        discountAmount: discountAmount,
+        promoCode: appliedPromo ? appliedPromo.code : null,
         shippingAddress: formData,
         status: "pending",
         paymentStatus: "pending",
@@ -123,7 +158,9 @@ export default function Checkout() {
                     db_order_id: createdOrder.id,
                     razorpay_order_id: response.razorpay_order_id,
                     razorpay_payment_id: response.razorpay_payment_id,
-                    razorpay_signature: response.razorpay_signature
+                    razorpay_signature: response.razorpay_signature,
+                    userEmail: formData.email,
+                    totalAmount: grandTotal
                   })
                 });
                 if (!verifyRes.ok) throw new Error("Payment signature verification failed");
@@ -338,7 +375,30 @@ export default function Checkout() {
               <div className="border-t border-border/30 pt-4 space-y-3 text-sm">
                 <div className="flex justify-between"><span className="text-muted-foreground">Subtotal</span><span className="font-medium">{formatPrice(total)}</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">Shipping</span><span className="font-medium">{shipping === 0 ? "Free" : formatPrice(shipping)}</span></div>
+                {discountAmount > 0 && (
+                  <div className="flex justify-between text-green-500 font-bold">
+                    <span>Discount ({appliedPromo?.code})</span>
+                    <span>-{formatPrice(discountAmount)}</span>
+                  </div>
+                )}
                 <div className="border-t border-border/30 pt-3 flex justify-between"><span className="font-bold">Total</span><span className="font-heading font-bold text-xl">{formatPrice(grandTotal)}</span></div>
+              </div>
+
+              {/* Promo Code Engine */}
+              <div className="border-t border-border/30 pt-6 mt-6">
+                <p className="text-[10px] font-black uppercase text-muted-foreground mb-3 ml-1 tracking-widest">Promotion Code</p>
+                <div className="flex gap-2">
+                  <input 
+                    type="text" 
+                    value={promoCodeInput}
+                    onChange={(e) => setPromoCodeInput(e.target.value)}
+                    placeholder="ENTER CODE" 
+                    className="flex-grow h-12 px-4 glass rounded-xl text-sm font-bold uppercase focus:outline-none focus:ring-2 focus:ring-primary/30 border-0 shadow-inner" 
+                  />
+                  <Button type="button" onClick={handleApplyPromo} disabled={isApplyingPromo} variant="outline" className="h-12 w-20 text-xs font-bold rounded-xl glass hover:bg-primary/10 border border-primary/20">
+                    {isApplyingPromo ? <Loader2 className="w-4 h-4 animate-spin"/> : "APPLY"}
+                  </Button>
+                </div>
               </div>
             </div>
           </div>

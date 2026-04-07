@@ -1,13 +1,49 @@
-import { Mail, Phone, MapPin } from "lucide-react";
+import { useState } from "react";
+import { Mail, Phone, MapPin, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
 export default function Contact() {
-  const handleSubmit = (e: React.FormEvent) => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formData, setFormData] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    subject: "Order Inquiry",
+    message: ""
+  });
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast.success("Message sent successfully!", {
-      description: "We will get back to you within 24 hours.",
-    });
+    setIsSubmitting(true);
+    
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData)
+      });
+      
+      const data = await res.json();
+      
+      if (!res.ok) throw new Error(data.message || "Failed to send");
+      
+      toast.success("Message sent successfully!", {
+        description: "We will get back to you within 24 hours.",
+      });
+      
+      // If we are in dev/Ethereal mode, let's log the preview URL for testing!
+      if (data.previewUrl) {
+          console.log("Email Preview URL:", data.previewUrl);
+          toast("Dev Mode: Check Console for Email Preview Link");
+      }
+      
+      setFormData({ firstName: "", lastName: "", email: "", subject: "Order Inquiry", message: "" });
+    } catch (err: any) {
+      toast.error("Failed to send message", { description: err.message });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -73,22 +109,22 @@ export default function Contact() {
               <div className="grid sm:grid-cols-2 gap-6">
                 <div>
                   <label className="text-sm font-medium mb-2 block">First Name</label>
-                  <input required type="text" className="w-full h-12 px-4 border border-border rounded-md bg-background focus:ring-2 focus:ring-primary focus:outline-none" />
+                  <input required type="text" value={formData.firstName} onChange={(e) => setFormData({...formData, firstName: e.target.value})} className="w-full h-12 px-4 border border-border rounded-md bg-background focus:ring-2 focus:ring-primary focus:outline-none" />
                 </div>
                 <div>
                   <label className="text-sm font-medium mb-2 block">Last Name</label>
-                  <input required type="text" className="w-full h-12 px-4 border border-border rounded-md bg-background focus:ring-2 focus:ring-primary focus:outline-none" />
+                  <input required type="text" value={formData.lastName} onChange={(e) => setFormData({...formData, lastName: e.target.value})} className="w-full h-12 px-4 border border-border rounded-md bg-background focus:ring-2 focus:ring-primary focus:outline-none" />
                 </div>
               </div>
 
               <div>
                 <label className="text-sm font-medium mb-2 block">Email Address</label>
-                <input required type="email" className="w-full h-12 px-4 border border-border rounded-md bg-background focus:ring-2 focus:ring-primary focus:outline-none" />
+                <input required type="email" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} className="w-full h-12 px-4 border border-border rounded-md bg-background focus:ring-2 focus:ring-primary focus:outline-none" />
               </div>
 
               <div>
                 <label className="text-sm font-medium mb-2 block">Subject</label>
-                <select className="w-full h-12 px-4 border border-border rounded-md bg-background focus:ring-2 focus:ring-primary focus:outline-none">
+                <select value={formData.subject} onChange={(e) => setFormData({...formData, subject: e.target.value})} className="w-full h-12 px-4 border border-border rounded-md bg-background focus:ring-2 focus:ring-primary focus:outline-none">
                   <option>Order Inquiry</option>
                   <option>Returns & Exchanges</option>
                   <option>Product Information</option>
@@ -99,10 +135,12 @@ export default function Contact() {
 
               <div>
                 <label className="text-sm font-medium mb-2 block">Message</label>
-                <textarea required rows={5} className="w-full p-4 border border-border rounded-md bg-background focus:ring-2 focus:ring-primary focus:outline-none resize-none"></textarea>
+                <textarea required rows={5} value={formData.message} onChange={(e) => setFormData({...formData, message: e.target.value})} className="w-full p-4 border border-border rounded-md bg-background focus:ring-2 focus:ring-primary focus:outline-none resize-none"></textarea>
               </div>
 
-              <Button type="submit" className="w-full h-12 font-bold text-base">Send Message</Button>
+              <Button type="submit" disabled={isSubmitting} className="w-full h-12 font-bold text-base">
+                {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin mx-auto"/> : "Send Message"}
+              </Button>
             </form>
           </div>
         </div>

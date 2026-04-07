@@ -3,6 +3,15 @@ import crypto from "crypto";
 import { sendStoreEmail } from "./utils/email";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // Health check for easy testing
+  if (req.method === "GET") {
+    return res.status(200).json({ 
+      status: "ok", 
+      hasSecret: !!(process.env.RAZORPAY_KEY_SECRET || process.env.VITE_RAZORPAY_KEY_SECRET),
+      hasEmailUser: !!(process.env.EMAIL_USER || process.env.VITE_EMAIL_USER)
+    });
+  }
+
   if (req.method !== "POST") {
     return res.status(405).json({ message: "Method Not Allowed" });
   }
@@ -10,8 +19,29 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const { db_order_id, razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
 
-    const secret = process.env.RAZORPAY_KEY_SECRET || process.env.VITE_RAZORPAY_KEY_SECRET; // Falling back if user hasn't fixed env yet
-    if (!secret) throw new Error("Server secret key is not configured.");
+    console.log("Verify request received:", {
+      hasOrderId: !!db_order_id,
+      hasRazorOrderId: !!razorpay_order_id,
+      hasPaymentId: !!razorpay_payment_id,
+      hasSig: !!razorpay_signature
+    });
+
+    if (!db_order_id || !razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+      console.error("Missing fields in request body:", req.body);
+      return res.status(400).json({ status: "failure", message: "Missing required verification fields" });
+    }
+
+    // Checking for all possible env variable names (Vercel vs Local)
+    const secret = process.env.RAZORPAY_KEY_SECRET || process.env.VITE_RAZORPAY_KEY_SECRET; 
+    
+    if (!secret) {
+      console.error("ENVIRONMENT ERROR: RAZORPAY_KEY_SECRET is missing. Please check your Vercel Dashboard or .env.local file.");
+      return res.status(500).json({ 
+        status: "error", 
+        message: "Server configuration error: Payment Secret Missing",
+        debug: { hasToken: !!process.env.GITHUB_TOKEN, hasProjectId: !!process.env.VITE_FIREBASE_PROJECT_ID }
+      });
+    }
 
     const generated_signature = crypto
       .createHmac("sha256", secret)
@@ -78,10 +108,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       return res.status(200).json({ status: "success", message: "Payment verified successfully" });
     } else {
+      console.warn("Invalid Razorpay Signature detected for Order:", db_order_id);
       return res.status(400).json({ status: "failure", message: "Invalid Signature" });
     }
   } catch (error: any) {
-    console.error("Razorpay Verification Error:", error);
-    return res.status(500).json({ message: "Server error during verification", error: error.message });
+    console.error("CRITICAL: Razorpay Verification Error:", error);
+    return res.status(500).json({ 
+      status: "error", 
+      message: "Internal server error during verification", 
+      error: error.message 
+    });
   }
 }

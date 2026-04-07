@@ -3,15 +3,21 @@ import nodemailer from "nodemailer";
 // Using env or ethereal email for testing
 const getTransporter = async () => {
     // If user provided real gmail credentials
-    if (process.env.VITE_EMAIL_USER && process.env.VITE_EMAIL_APP_PASSWORD) {
+    const user = process.env.VITE_EMAIL_USER || process.env.EMAIL_USER;
+    const pass = process.env.VITE_EMAIL_APP_PASSWORD || process.env.EMAIL_APP_PASSWORD;
+
+    console.log("Email Utility Init - User:", user ? "FOUND" : "MISSING");
+    console.log("Email Utility Init - Pass:", pass ? "FOUND" : "MISSING");
+
+    if (user && pass) {
+        console.log("Using GMAIL SMTP Service...");
         return nodemailer.createTransport({
             service: "gmail",
-            auth: {
-                user: process.env.VITE_EMAIL_USER,
-                pass: process.env.VITE_EMAIL_APP_PASSWORD
-            }
+            auth: { user, pass }
         });
     }
+
+    console.log("Falling back to ETHEREAL Mock Service...");
 
     // Fallback to free ethereal email for easy debugging if user didn't set up gmail yet.
     // It captures emails and generates a preview URL.
@@ -46,20 +52,25 @@ export const sendStoreEmail = async (to: string, subject: string, htmlContent: s
     </div>
     `;
 
-    const info = await transporter.sendMail({
-        from: '"LYRA Support" <hello@lyrastylehub.com>', 
-        to: to,
-        subject: subject,
-        html: layout,
-    });
+    try {
+        const info = await transporter.sendMail({
+            from: '"LYRA Support" <hello@lyrastylehub.com>', 
+            to: to,
+            subject: subject,
+            html: layout,
+        });
 
-    console.log("Message sent to", to, " | ID:", info.messageId);
-    
-    // In dev mode with Ethereal, it gives us a real browser URL to see the generated email!
-    const previewUrl = nodemailer.getTestMessageUrl(info);
-    if (previewUrl) {
-        console.log("Preview URL: %s", previewUrl);
+        console.log("Message sent to", to, " | ID:", info.messageId);
+        
+        const previewUrl = nodemailer.getTestMessageUrl(info);
+        if (previewUrl) {
+            console.log("Preview URL: %s", previewUrl);
+        }
+        
+        return previewUrl; 
+    } catch (err: any) {
+        console.error("Critical: Nodemailer failed to send email to", to);
+        console.error("Error details:", err);
+        throw err;
     }
-    
-    return previewUrl; 
 }

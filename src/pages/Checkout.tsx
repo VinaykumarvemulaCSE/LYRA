@@ -143,7 +143,7 @@ export default function Checkout() {
 
               toast.success("Payment Successful!", { description: "Your order has been authorized." });
               clearCart();
-              navigate("/order-confirmation");
+              navigate(`/order-confirmation?orderId=${createdOrder.id}`);
            } catch (err: any) {
               setErrorMsg(err.message);
               toast.error("Verification Failed", { description: err.message });

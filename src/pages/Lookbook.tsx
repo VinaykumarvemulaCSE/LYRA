@@ -9,7 +9,7 @@ const looks = [
     image: "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=1962", 
     title: "Summer Minimal",
     hotspots: [
-      { x: "45%", y: "40%", productId: "w-dress-1" }
+      { x: "45%", y: "40%", productId: "prod_w_dress_02" }
     ]
   },
   { image: "https://images.unsplash.com/photo-1434389677669-e08b4cda3a95?q=80&w=2068", title: "Modern Tailoring", hotspots: [] },
@@ -17,7 +17,7 @@ const looks = [
     image: "https://images.unsplash.com/photo-1539109136881-3be0616acf4b?q=80&w=1974", 
     title: "Urban Context",
     hotspots: [
-      { x: "50%", y: "30%", productId: "m-hoodie-1" }
+      { x: "50%", y: "30%", productId: "prod_m_jacket_01" }
     ]
   },
   { image: "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?q=80&w=2070", title: "Silk & Shadow", hotspots: [] },
@@ -25,7 +25,7 @@ const looks = [
     image: "https://images.unsplash.com/photo-1469334031218-e382a71b716b?q=80&w=1920", 
     title: "The Signature Edit",
     hotspots: [
-      { x: "55%", y: "60%", productId: "w-jeans-1" }
+      { x: "55%", y: "60%", productId: "prod_w_jacket_08" }
     ]
   },
   { image: "https://images.unsplash.com/photo-1445205170230-053b83016050?q=80&w=1920", title: "Ethereal Layers", hotspots: [] },

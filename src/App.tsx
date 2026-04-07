@@ -22,6 +22,7 @@ import Wishlist from "./pages/Wishlist";
 import SearchResults from "./pages/SearchResults";
 import Auth from "./pages/Auth";
 import Account from "./pages/Account";
+import ResetPassword from "./pages/ResetPassword";
 
 import About from "./pages/About";
 import Contact from "./pages/Contact";
@@ -66,6 +67,8 @@ const App = () => (
               <Route path="/auth" element={<Auth />} />
               <Route path="/account" element={<Account />} />
               <Route path="/admin" element={<Admin />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
+
               
               <Route path="/emails" element={<EmailPreviews />} />
 

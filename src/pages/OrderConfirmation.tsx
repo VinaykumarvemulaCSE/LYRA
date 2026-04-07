@@ -1,10 +1,12 @@
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { CheckCircle2, Package, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 
 export default function OrderConfirmation() {
-  const orderNumber = `ORD-${Math.floor(100000 + Math.random() * 900000)}`;
+  const [searchParams] = useSearchParams();
+  const orderId = searchParams.get("orderId");
+  const orderNumber = orderId || `ORD-${Math.floor(100000 + Math.random() * 900000)}`;
 
   return (
     <main className="pt-32 pb-24 min-h-screen flex items-center justify-center px-4">

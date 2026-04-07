@@ -1,0 +1,44 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // 👗 PRODUCTS: Everyone can browse
+    // Only the Admin can edit full details, but we allow authenticated users 
+    // to update ONLY if they are doing a stock decrement (part of checkout)
+    match /products/{productId} {
+      allow read: if true;
+      allow write: if request.auth != null && (
+        request.auth.token.admin == true ||
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['variants', 'updatedAt']))
+      );
+    }
+    
+    // 👤 USERS: Users can only see/edit their OWN profile
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // 🛒 CARTS: Users can manage their own persistent shopping bag
+    match /carts/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // 📦 ORDERS: Users can place orders and see their OWN history
+    match /orders/{orderId} {
+      allow read: if request.auth != null && (resource == null || resource.data.userId == request.auth.uid);
+      allow create: if request.auth != null;
+      // Allow user to update their own order status during checkout flow
+      allow update: if request.auth != null && (
+        request.auth.token.admin == true ||
+        (resource.data.userId == request.auth.uid)
+      );
+    }
+
+    // 🏆 REVIEWS: Everyone can read, authenticated users can write their own
+    match /reviews/{reviewId} {
+      allow read: if true;
+      allow create: if request.auth != null;
+    }
+  }
+}

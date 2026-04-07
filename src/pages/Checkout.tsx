@@ -196,20 +196,20 @@ export default function Checkout() {
         },
       };
 
-      // 6. Decide between Real Gateway or Demo Mode
-      const isDemoMode = !res || !(window as any).Razorpay || orderData.id.startsWith("order_demo_");
+      // 6. Decide between Real Gateway or Full Demo Mode
+      const isDemoMode = orderData.id.startsWith("order_demo_");
 
       if (isDemoMode) {
-         console.warn("Processing mock order completion (Demo Mode).");
-         // Simulate a small delay for realism
+         console.warn("Demo Mode: Backend API unavailable. Simulating payment flow.");
+         console.warn("To use real Razorpay, run: npx vercel dev --listen 3001");
+         setIsProcessing(true);
          await new Promise(r => setTimeout(r, 1500));
          
-         // Trigger the success handler directly
-         options.handler({
-           razorpay_order_id: orderData.id,
-           razorpay_payment_id: "pay_demo_" + Date.now(),
-           razorpay_signature: "mock_sig_" + Date.now()
-         });
+         // Simulate success directly without opening Razorpay UI
+         await dataService.orders.updateStatus(createdOrder.id, "processing");
+         toast.success("Demo Payment Successful!", { description: "Run 'npx vercel dev' for real payment processing." });
+         clearCart();
+         navigate(`/order-confirmation?orderId=${createdOrder.id}`);
          return;
       }
 

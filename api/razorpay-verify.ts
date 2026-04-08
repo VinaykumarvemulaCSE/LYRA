@@ -9,27 +9,21 @@ import { sendStoreEmail } from "./utils/email";
  * Uses FIREBASE_SERVICE_ACCOUNT_JSON (full service account JSON string) or
  * falls back to Application Default Credentials (works on GCP / when ADC is configured).
  */
-if (getApps().length === 0) {
+try {
+  if (getApps().length === 0) {
     const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
-
     if (serviceAccountJson) {
-        try {
-            const serviceAccount = JSON.parse(serviceAccountJson);
-            initializeApp({
-                credential: cert(serviceAccount)
-            });
-        } catch (e) {
-            console.error("Failed to parse FIREBASE_SERVICE_ACCOUNT_JSON", e);
-            // Fallback to default if JSON is malformed
-            initializeApp();
-        }
+      const serviceAccount = JSON.parse(serviceAccountJson);
+      initializeApp({ credential: cert(serviceAccount) });
     } else {
-        // Falls back to Application Default Credentials
-        initializeApp();
+      console.warn("[Firebase] No service account JSON found. Backend will run in restricted mode.");
     }
+  }
+} catch (e) {
+  console.error("[Firebase] Initialization error:", e);
 }
 
-const adminDb = getFirestore();
+const adminDb = getApps().length > 0 ? getFirestore() : null;
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") {
@@ -70,7 +64,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   console.log(`[Verify] Signature valid for order: ${db_order_id}`);
 
   try {
-    // const adminDb = getAdminDb(); // Removed stale call after rollback
+    if (!adminDb) {
+      console.error("[Verify] Firebase Admin SDK not initialized. Check your environment variables.");
+      return res.status(500).json({ status: "error", message: "Database system unavailable." });
+    }
     const orderRef = adminDb.collection("orders").doc(db_order_id);
 
     // Fetch the order document to get the authoritative amount + items

@@ -1,73 +1,66 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import * as crypto from "crypto";
-import { initializeApp, getApps, cert } from "firebase-admin/app";
-import { getFirestore, FieldValue } from "firebase-admin/firestore";
-import { sendStoreEmail } from "./utils/email";
+// All heavy modules loaded dynamically to prevent Vercel 500 Server Load errors
 
-// --- Lazy Initializer ---
-const getAdminDb = () => {
-  try {
-    if (getApps().length === 0) {
-      const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
-      let serviceAccount;
-
-      if (serviceAccountJson && serviceAccountJson.trim().startsWith("{")) {
-        serviceAccount = JSON.parse(serviceAccountJson);
-      } else if (process.env.FB_PROJECT_ID && process.env.FB_CLIENT_EMAIL && process.env.FB_PRIVATE_KEY) {
-        serviceAccount = {
-          projectId: process.env.FB_PROJECT_ID,
-          clientEmail: process.env.FB_CLIENT_EMAIL,
-          // Replace escaped newlines if they exist
-          privateKey: process.env.FB_PRIVATE_KEY.replace(/\\n/g, '\n'),
-        };
-      } else {
-        throw new Error("Missing Firebase credentials. Provide either FIREBASE_SERVICE_ACCOUNT_JSON or FB_PROJECT_ID/FB_CLIENT_EMAIL/FB_PRIVATE_KEY.");
-      }
-      
-      initializeApp({ credential: cert(serviceAccount) });
-    }
-    return getFirestore();
-  } catch (error: any) {
-    console.error("[Firebase Admin Error]:", error.message);
-    return null;
-  }
-};
+let adminDbCache: any = null;
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  if (req.method !== "POST") {
-    return res.status(405).json({ message: "Method Not Allowed" });
-  }
-
-  const { db_order_id, razorpay_order_id, razorpay_payment_id, razorpay_signature, userEmail } = req.body;
-
-  // 1. Basic check
-  if (!db_order_id || !razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
-    return res.status(400).json({ status: "failure", message: "Required fields are missing." });
-  }
-
-  // 2. Initialize Firestore
-  const adminDb = getAdminDb();
-  if (!adminDb) {
-    return res.status(500).json({ status: "error", message: "Database initialization failed. Check server logs." });
-  }
-
-  // 3. HMAC Verification 
-  const secret = process.env.RAZORPAY_KEY_SECRET?.trim();
-  if (!secret) {
-    return res.status(500).json({ status: "error", message: "Razorpay secret missing." });
-  }
-
-  const expectedSignature = crypto
-    .createHmac("sha256", secret)
-    .update(`${razorpay_order_id}|${razorpay_payment_id}`)
-    .digest("hex");
-
-  if (expectedSignature !== razorpay_signature) {
-    console.warn(`[Verify] Signature mismatch for Order: ${razorpay_order_id}`);
-    return res.status(400).json({ status: "failure", message: "Invalid payment signature." });
-  }
-
   try {
+    if (req.method !== "POST") {
+      return res.status(405).json({ message: "Method Not Allowed" });
+    }
+
+    const { db_order_id, razorpay_order_id, razorpay_payment_id, razorpay_signature, userEmail } = req.body;
+
+    if (!db_order_id || !razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+      return res.status(400).json({ status: "failure", message: "Required fields are missing." });
+    }
+
+    // 1. Dynamic Imports
+    const crypto = await import("crypto");
+    const { getApps, initializeApp, cert } = await import("firebase-admin/app");
+    const { getFirestore, FieldValue } = await import("firebase-admin/firestore");
+
+    // 2. Initialize Firestore Database (with cache and dynamic vars)
+    if (!adminDbCache) {
+      if (getApps().length === 0) {
+        const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+        let serviceAccount;
+
+        if (serviceAccountJson && serviceAccountJson.trim().startsWith("{")) {
+          serviceAccount = JSON.parse(serviceAccountJson);
+        } else if (process.env.FB_PROJECT_ID && process.env.FB_CLIENT_EMAIL && process.env.FB_PRIVATE_KEY) {
+          serviceAccount = {
+            projectId: process.env.FB_PROJECT_ID,
+            clientEmail: process.env.FB_CLIENT_EMAIL,
+            privateKey: process.env.FB_PRIVATE_KEY.replace(/\\n/g, '\n'),
+          };
+        } else {
+          throw new Error("Missing Firebase credentials (FB_PROJECT_ID, FB_CLIENT_EMAIL, FB_PRIVATE_KEY) in Vercel Environment.");
+        }
+        
+        initializeApp({ credential: cert(serviceAccount) });
+      }
+      adminDbCache = getFirestore();
+    }
+    const adminDb = adminDbCache;
+
+    // 3. HMAC Verification 
+    const secret = process.env.RAZORPAY_KEY_SECRET?.trim();
+    if (!secret) {
+      throw new Error("Razorpay secret (RAZORPAY_KEY_SECRET) is missing in Vercel.");
+    }
+
+    const expectedSignature = crypto
+      .createHmac("sha256", secret)
+      .update(`${razorpay_order_id}|${razorpay_payment_id}`)
+      .digest("hex");
+
+    if (expectedSignature !== razorpay_signature) {
+      console.warn(`[Verify] Signature mismatch for Order: ${razorpay_order_id}`);
+      return res.status(400).json({ status: "failure", message: "Invalid payment signature." });
+    }
+
+    // 4. Update Database
     const orderRef = adminDb.collection("orders").doc(db_order_id);
     const orderSnap = await orderRef.get();
 
@@ -76,10 +69,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const orderData = orderSnap.data() || {};
-    const totalAmount = orderData.totalAmount ?? 0;
     const items = orderData.items ?? [];
 
-    // Atomically Update Status
     await orderRef.update({
       status: "processing",
       paymentStatus: "paid",
@@ -87,7 +78,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       updatedAt: FieldValue.serverTimestamp(),
     });
 
-    // Stock decrement 
     const batch = adminDb.batch();
     for (const item of items) {
       const productRef = adminDb.collection("products").doc(item.id);
@@ -104,18 +94,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
     await batch.commit();
 
-    // Send confirmation
+    // 5. Send Email
     const recipient = userEmail || orderData.shippingAddress?.email;
     if (recipient) {
+      const { sendStoreEmail } = await import("./utils/email");
       const shortId = db_order_id.substring(0, 8).toUpperCase();
-      sendStoreEmail(recipient, `Your LYRA Order Confirmed #${shortId}`, "Your payment has been successfully verified.")
-        .catch(err => console.error("[Email Error]:", err.message));
+      sendStoreEmail(recipient, `Your LYRA Order Confirmed #${shortId}`, `Your payment has been successfully verified for order ${shortId}.`)
+        .catch(err => console.error("[Email Sync Error]:", err.message));
     }
 
-    return res.status(200).json({ status: "success", message: "Payment verified." });
+    return res.status(200).json({ status: "success", message: "Payment verified successfully." });
 
   } catch (error: any) {
-    console.error("[Verify Handler Error]:", error.message);
-    return res.status(500).json({ status: "error", message: "Internal server error during order update." });
+    console.error("[Fatal Handler Error]:", error.stack || error.message);
+    return res.status(500).json({ status: "error", message: error.message });
   }
 }

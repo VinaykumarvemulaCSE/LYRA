@@ -3,7 +3,8 @@ import { Link, useNavigate } from "react-router-dom";
 import { 
   LayoutDashboard, ShoppingBag, ClipboardList, Users, BarChart3, Tags, Settings, LogOut, 
   Plus, Search, Edit2, Trash2, Eye, Package, Loader2, Rocket, RefreshCw, Check, X, 
-  TrendingUp, CreditCard, ArrowUpRight, ChevronDown, ToggleLeft, ToggleRight, Upload
+  TrendingUp, CreditCard, ArrowUpRight, ChevronDown, ToggleLeft, ToggleRight, Upload,
+  ShieldCheck, AlertCircle, Terminal, Cloud, Database
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatPrice } from "@/data/products";
@@ -41,6 +42,8 @@ export default function Admin() {
   const [storeSettings, setStoreSettings] = useState({ storeName: "LYRA", supportEmail: "" });
   const [dbProductCount, setDbProductCount] = useState(0);
   const [isDeploying, setIsDeploying] = useState(false);
+  const [diagResults, setDiagResults] = useState<any>(null);
+  const [isCheckingDiag, setIsCheckingDiag] = useState(false);
 
   // Auth guard - WARNING: Client-side only, bypassable. 
   // TODO: Implement Firebase Security Rules or server-side admin verification
@@ -78,6 +81,9 @@ export default function Admin() {
       if (activeTab === "settings") {
         const cfg = await dataService.settings.get();
         setStoreSettings(cfg as any);
+      }
+      if (activeTab === "diagnostics") {
+        await runDiagnostics();
       }
     } catch (err) { console.error("Admin fetch error:", err); }
     finally { setIsLoading(false); }
@@ -229,6 +235,25 @@ export default function Admin() {
 
   const handleSignOut = async () => { await signOut(); navigate("/auth"); };
 
+  const runDiagnostics = async () => {
+    setIsCheckingDiag(true);
+    try {
+      const res = await fetch("/api/system-diagnostics");
+      const data = await res.json();
+      setDiagResults(data);
+      if (data.database.status === "connected") {
+        toast.success("Systems are healthy");
+      } else {
+        toast.error("Configuration issues detected");
+      }
+    } catch (err: any) {
+      toast.error("Failed to reach diagnostics API");
+      setDiagResults({ error: "API Unreachable" });
+    } finally {
+      setIsCheckingDiag(false);
+    }
+  };
+
   // ─── COMPUTED ───────────────────────────────
   const activeOrders = dbOrders.filter(o => o.status === 'pending' || o.status === 'processing');
   const totalRevenue = dbOrders.filter(o => o.status !== 'cancelled').reduce((s, o) => s + (o.totalAmount || 0), 0);
@@ -261,6 +286,7 @@ export default function Admin() {
     { id: "analytics", label: "Analytics", icon: BarChart3 },
     { id: "promotions", label: "Promotions", icon: Tags },
     { id: "settings", label: "Settings", icon: Settings },
+    { id: "diagnostics", label: "Diagnostics", icon: ShieldCheck },
     { id: "deploy", label: "Deploy / DB", icon: Rocket },
   ];
 
@@ -709,6 +735,82 @@ export default function Admin() {
                 </div>
                 <Button onClick={async () => { await dataService.settings.update(storeSettings); toast.success("Settings saved"); }} className="gradient-primary border-0 rounded-xl">Save Changes</Button>
               </div>
+            </div>
+          )}
+
+          {/* ── DIAGNOSTICS ────────────────────── */}
+          {activeTab === "diagnostics" && (
+            <div className="space-y-6">
+              <div className="flex justify-between items-center">
+                <h1 className="font-heading text-3xl font-bold">System Diagnostics</h1>
+                <Button onClick={runDiagnostics} disabled={isCheckingDiag} className="gap-2 gradient-primary border-0 rounded-xl">
+                  {isCheckingDiag ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                  Run Check
+                </Button>
+              </div>
+
+              {!diagResults && !isCheckingDiag && (
+                <div className="glass-strong rounded-3xl p-12 text-center">
+                  <ShieldCheck className="w-16 h-16 mx-auto mb-4 text-primary opacity-20" />
+                  <h3 className="text-xl font-bold mb-2">Ready to Scan</h3>
+                  <p className="text-muted-foreground mb-6">Verify your Firebase, Razorpay, and Email configurations.</p>
+                  <Button onClick={runDiagnostics} className="gradient-primary border-0 rounded-xl px-8 h-12">Start Diagnostic Scan</Button>
+                </div>
+              )}
+
+              {diagResults && (
+                <div className="grid md:grid-cols-2 gap-6">
+                  {/* Environment Column */}
+                  <div className="space-y-6">
+                    <div className="glass-strong rounded-2xl p-6">
+                      <h3 className="font-heading font-bold mb-4 flex items-center gap-2"><Terminal className="w-4 h-4 text-primary" /> Environment Variables</h3>
+                      <div className="space-y-4">
+                        {[
+                          { name: "FIREBASE_SERVICE_ACCOUNT_JSON", status: diagResults.env?.FIREBASE_JSON?.status || 'missing', detail: diagResults.env?.FIREBASE_JSON?.detail, advice: diagResults.env?.FIREBASE_JSON?.advice },
+                          { name: "RAZORPAY_KEYS", status: diagResults.env?.RAZORPAY_KEY?.status || 'missing' },
+                          { name: "EMAIL_SMTP", status: diagResults.env?.EMAIL_USER?.status || 'missing' }
+                        ].map(v => (
+                          <div key={v.name} className={`p-4 rounded-xl border-l-4 ${v.status === 'valid_format' || v.status === 'present' ? 'bg-emerald-500/5 border-emerald-500' : 'bg-destructive/5 border-destructive'}`}>
+                            <div className="flex justify-between items-start mb-1">
+                              <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{v.name}</span>
+                              {v.status === 'valid_format' || v.status === 'present' ? <Check className="w-4 h-4 text-emerald-500" /> : <AlertCircle className="w-4 h-4 text-destructive" />}
+                            </div>
+                            <p className="text-sm font-bold capitalize">{v.status.replace(/_/g, ' ')}</p>
+                            {v.detail && <p className="text-xs text-muted-foreground mt-1 font-mono break-all">{v.detail}</p>}
+                            {v.advice && (
+                              <div className="mt-3 p-3 bg-destructive/10 rounded-lg border border-destructive/20">
+                                <p className="text-[10px] font-bold text-destructive uppercase mb-1">Recommended Fix:</p>
+                                <p className="text-xs text-destructive/80 leading-relaxed font-medium">{v.advice}</p>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Connection Column */}
+                  <div className="space-y-6">
+                    <div className="glass-strong rounded-2xl p-6">
+                      <h3 className="font-heading font-bold mb-4 flex items-center gap-2"><Cloud className="w-4 h-4 text-primary" /> Service Connectivity</h3>
+                      <div className={`p-6 rounded-2xl text-center border-2 border-dashed ${diagResults?.database?.status === 'connected' ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-destructive/30 bg-destructive/5'}`}>
+                        <Database className={`w-12 h-12 mx-auto mb-3 ${diagResults?.database?.status === 'connected' ? 'text-emerald-500' : 'text-destructive'}`} />
+                        <h4 className="font-bold text-lg">Firebase Database</h4>
+                        <p className="text-sm text-muted-foreground mb-4">Real-time connection test result</p>
+                        <div className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest ${diagResults?.database?.status === 'connected' ? 'bg-emerald-500 text-white' : 'bg-destructive text-white'}`}>
+                          {diagResults?.database?.status === 'connected' ? <><Check className="w-3 h-3" /> Online</> : <><X className="w-3 h-3" /> Offline</>}
+                        </div>
+                        {diagResults?.database?.error && (
+                          <p className="mt-4 text-[10px] font-mono p-3 bg-black/20 rounded-lg text-destructive-foreground/70 break-all">{diagResults.database.error}</p>
+                        )}
+                        {diagResults?.database?.status === 'connected' && (
+                          <p className="mt-4 text-xs font-bold text-emerald-600">Successfully fetched {diagResults.database.count} products from Firestore.</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

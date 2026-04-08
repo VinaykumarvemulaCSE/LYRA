@@ -1,26 +1,12 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-// All heavy modules loaded dynamically to prevent Vercel 500 Server Load errors
+import * as crypto from "crypto";
+import { getApps, initializeApp, cert } from "firebase-admin/app";
+import { getFirestore, FieldValue } from "firebase-admin/firestore";
+import { sendStoreEmail } from "./utils/email";
 
 let adminDbCache: any = null;
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
-  try {
-    if (req.method !== "POST") {
-      return res.status(405).json({ message: "Method Not Allowed" });
-    }
-
-    const { db_order_id, razorpay_order_id, razorpay_payment_id, razorpay_signature, userEmail } = req.body;
-
-    if (!db_order_id || !razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
-      return res.status(400).json({ status: "failure", message: "Required fields are missing." });
-    }
-
-    // 1. Dynamic Imports
-    const crypto = await import("crypto");
-    const { getApps, initializeApp, cert } = await import("firebase-admin/app");
-    const { getFirestore, FieldValue } = await import("firebase-admin/firestore");
-
-    // 2. Initialize Firestore Database (with cache and dynamic vars)
+const getAdminDb = () => {
     if (!adminDbCache) {
       if (getApps().length === 0) {
         const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
@@ -42,9 +28,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
       adminDbCache = getFirestore();
     }
-    const adminDb = adminDbCache;
+    return adminDbCache;
+};
 
-    // 3. HMAC Verification 
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  try {
+    if (req.method !== "POST") {
+      return res.status(405).json({ message: "Method Not Allowed" });
+    }
+
+    const { db_order_id, razorpay_order_id, razorpay_payment_id, razorpay_signature, userEmail } = req.body;
+
+    if (!db_order_id || !razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+      return res.status(400).json({ status: "failure", message: "Required fields are missing." });
+    }
+
+    // 1. Initialize Firestore Database (with cache and dynamic vars)
+    const adminDb = getAdminDb();
+
+    // 2. HMAC Verification 
     const secret = process.env.RAZORPAY_KEY_SECRET?.trim();
     if (!secret) {
       throw new Error("Razorpay secret (RAZORPAY_KEY_SECRET) is missing in Vercel.");
@@ -60,7 +62,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ status: "failure", message: "Invalid payment signature." });
     }
 
-    // 4. Update Database
+    // 3. Update Database
     const orderRef = adminDb.collection("orders").doc(db_order_id);
     const orderSnap = await orderRef.get();
 
@@ -94,10 +96,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
     await batch.commit();
 
-    // 5. Send Email
+    // 4. Send Email
     const recipient = userEmail || orderData.shippingAddress?.email;
     if (recipient) {
-      const { sendStoreEmail } = await import("./utils/email");
       const shortId = db_order_id.substring(0, 8).toUpperCase();
       sendStoreEmail(recipient, `Your LYRA Order Confirmed #${shortId}`, `Your payment has been successfully verified for order ${shortId}.`)
         .catch(err => console.error("[Email Sync Error]:", err.message));

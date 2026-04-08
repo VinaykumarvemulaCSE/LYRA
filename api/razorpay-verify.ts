@@ -1,122 +1,166 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import crypto from "crypto";
+import { initializeApp, getApps, cert } from "firebase-admin/app";
+import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { sendStoreEmail } from "./utils/email";
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // Health check for easy testing
-  if (req.method === "GET") {
-    return res.status(200).json({ 
-      status: "ok", 
-      hasSecret: !!(process.env.RAZORPAY_KEY_SECRET || process.env.VITE_RAZORPAY_KEY_SECRET),
-      hasEmailUser: !!(process.env.EMAIL_USER || process.env.VITE_EMAIL_USER)
-    });
-  }
+/**
+ * Initializes Firebase Admin SDK once per cold start.
+ * Uses FIREBASE_SERVICE_ACCOUNT_JSON (full service account JSON string) or
+ * falls back to Application Default Credentials (works on GCP / when ADC is configured).
+ */
+if (getApps().length === 0) {
+    const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
 
+    if (serviceAccountJson) {
+        try {
+            const serviceAccount = JSON.parse(serviceAccountJson);
+            initializeApp({
+                credential: cert(serviceAccount)
+            });
+        } catch (e) {
+            console.error("Failed to parse FIREBASE_SERVICE_ACCOUNT_JSON", e);
+            // Fallback to default if JSON is malformed
+            initializeApp();
+        }
+    } else {
+        // Falls back to Application Default Credentials
+        initializeApp();
+    }
+}
+
+const adminDb = getFirestore();
+
+export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") {
     return res.status(405).json({ message: "Method Not Allowed" });
   }
 
-  try {
-    const { db_order_id, razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+  const { db_order_id, razorpay_order_id, razorpay_payment_id, razorpay_signature, userEmail } = req.body;
 
-    console.log("Verify request received:", {
-      hasOrderId: !!db_order_id,
-      hasRazorOrderId: !!razorpay_order_id,
-      hasPaymentId: !!razorpay_payment_id,
-      hasSig: !!razorpay_signature
+  // --- 1. Input Validation ---
+  if (!db_order_id || !razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+    console.error("[Verify] Missing required fields:", {
+      db_order_id: !!db_order_id,
+      razorpay_order_id: !!razorpay_order_id,
+      razorpay_payment_id: !!razorpay_payment_id,
+      razorpay_signature: !!razorpay_signature,
     });
+    return res.status(400).json({ status: "failure", message: "Missing required verification fields" });
+  }
 
-    if (!db_order_id || !razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
-      console.error("Missing fields in request body:", req.body);
-      return res.status(400).json({ status: "failure", message: "Missing required verification fields" });
+  // --- 2. HMAC Signature Verification ---
+  const secret = process.env.RAZORPAY_KEY_SECRET?.trim();
+  if (!secret) {
+    console.error("[Verify] RAZORPAY_KEY_SECRET is not configured.");
+    return res.status(500).json({ status: "error", message: "Server misconfigured." });
+  }
+
+  const expectedSignature = crypto
+    .createHmac("sha256", secret)
+    .update(`${razorpay_order_id}|${razorpay_payment_id}`)
+    .digest("hex");
+
+  if (expectedSignature !== razorpay_signature) {
+    console.warn(`[Verify] Signature mismatch for Order: ${razorpay_order_id}`);
+    return res.status(400).json({ status: "failure", message: "Payment signature is invalid." });
+  }
+
+  // --- 3. Signature is VALID — Update Firestore via Admin SDK ---
+  console.log(`[Verify] Signature valid for order: ${db_order_id}`);
+
+  try {
+    // const adminDb = getAdminDb(); // Removed stale call after rollback
+    const orderRef = adminDb.collection("orders").doc(db_order_id);
+
+    // Fetch the order document to get the authoritative amount + items
+    const orderSnap = await orderRef.get();
+    if (!orderSnap.exists) {
+      console.error(`[Verify] Order document ${db_order_id} not found in Firestore.`);
+      return res.status(404).json({ status: "error", message: "Order not found." });
     }
 
-    // Checking for all possible env variable names (Vercel vs Local)
-    const secret = process.env.RAZORPAY_KEY_SECRET || process.env.VITE_RAZORPAY_KEY_SECRET; 
-    
-    if (!secret) {
-      console.error("ENVIRONMENT ERROR: RAZORPAY_KEY_SECRET is missing. Please check your Vercel Dashboard or .env.local file.");
-      return res.status(500).json({ 
-        status: "error", 
-        message: "Server configuration error: Payment Secret Missing",
-        debug: { hasToken: !!process.env.GITHUB_TOKEN, hasProjectId: !!process.env.VITE_FIREBASE_PROJECT_ID }
-      });
-    }
+    const orderData = orderSnap.data() || {};
+    const totalAmount: number = orderData.totalAmount ?? 0;
+    const items: Array<{ id: string; color: string; quantity: number; variants?: Array<{ color: string; stock: number }> }> = orderData.items ?? [];
 
-    const generated_signature = crypto
-      .createHmac("sha256", secret)
-      .update(razorpay_order_id + "|" + razorpay_payment_id)
-      .digest("hex");
+    // --- 4. Update order status (atomic) ---
+    await orderRef.update({
+      status: "processing",
+      paymentStatus: "paid",
+      paymentId: razorpay_payment_id,
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+    console.log(`[Verify] Order ${db_order_id} marked as paid.`);
 
-    if (generated_signature === razorpay_signature) {
-      if (db_order_id) {
-        // Update Firestore order status using unauth REST call or client SDK.
-        // We will fetch the Firebase URL using standard REST to avoid importing client bundle here.
-        const project = process.env.FIREBASE_PROJECT_ID || process.env.VITE_FIREBASE_PROJECT_ID;
-        if (project) {
-          const fbEndpoint = `https://firestore.googleapis.com/v1/projects/${project}/databases/(default)/documents/orders/${db_order_id}`;
-          
-          await fetch(`${fbEndpoint}?updateMask.fieldPaths=status&updateMask.fieldPaths=paymentStatus&updateMask.fieldPaths=paymentId`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              fields: {
-                status: { stringValue: "processing" },
-                paymentStatus: { stringValue: "paid" },
-                paymentId: { stringValue: razorpay_payment_id }
-              }
-            })
-          }).catch(console.error); // Best effort, since public REST needs specific rules
+    // --- 5. Server-side stock decrement (previously done client-side — security fix) ---
+    const batch = adminDb.batch();
+    for (const item of items) {
+      if (!item.id || !item.color || !item.quantity) continue;
+      try {
+        const productRef = adminDb.collection("products").doc(item.id);
+        const productSnap = await productRef.get();
+        if (!productSnap.exists) continue;
+
+        const product = productSnap.data()!;
+        const variants: Array<{ color: string; stock: number }> = product.variants ?? [];
+        const variantIdx = variants.findIndex((v) => v.color === item.color);
+
+        if (variantIdx > -1) {
+          variants[variantIdx].stock = Math.max(0, variants[variantIdx].stock - item.quantity);
+          batch.update(productRef, { variants, updatedAt: FieldValue.serverTimestamp() });
         }
-
-        // --- NEW: SEND AUTOMATIC INVOICE EMAIL ---
-        try {
-          const { totalAmount = "0" } = req.body;
-          const emailHtml = `
-            <h1 style="font-size: 24px; font-weight: bold; margin-bottom: 16px; text-align: center;">Order Confirmed</h1>
-            <p>Hi there,</p>
-            <p>Thank you for your purchase. We're getting your order ready to be shipped. We will notify you when it has been sent.</p>
-            
-            <div style="background-color: #f8fafc; padding: 24px; border-radius: 8px; margin: 32px 0; border: 1px solid #e2e8f0; font-size: 14px;">
-              <div style="display: flex; justify-content: space-between; font-weight: bold; border-bottom: 1px solid #e2e8f0; padding-bottom: 16px; margin-bottom: 16px;">
-                <span>Order #${db_order_id.substring(0, 8).toUpperCase()}</span>
-                <span>${new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
-              </div>
-              <div style="margin-bottom: 16px;">
-                <p><strong>Payment ID:</strong> ${razorpay_payment_id}</p>
-                <p><strong>Status:</strong> Processing</p>
-              </div>
-              
-              <div style="border-top: 1px solid #e2e8f0; padding-top: 16px; margin-top: 16px; text-align: right;">
-                <p style="font-size: 18px; margin: 0;">Total Paid: <strong>₹${totalAmount}</strong></p>
-                <p style="font-weight: bold; font-size: 12px; color: #10b981; margin-top: 4px;">Payment Verified Successfully</p>
-              </div>
-            </div>
-
-            <div style="text-align: center; margin-top: 32px;">
-              <a href="https://lyrastylehub.com/account" style="background-color: #000; color: #fff; padding: 12px 32px; text-decoration: none; font-weight: bold; font-size: 12px; letter-spacing: 1px; text-transform: uppercase;">View Order Status</a>
-            </div>
-          `;
-          
-          const userEmail = req.body.userEmail || process.env.VITE_ADMIN_EMAIL || "kumarvinay072007@gmail.com";
-          await sendStoreEmail(userEmail, `Your LYRA Order Confirmed #${db_order_id.substring(0, 8).toUpperCase()}`, emailHtml);
-        } catch (emailErr) {
-          console.error("Failed to send order confirmation email:", emailErr);
-          // Non-blocking: we still return success for the payment verification
-        }
+      } catch (stockErr) {
+        // Non-fatal: log but don't block the payment success response
+        console.error(`[Verify] Stock update failed for product ${item.id}:`, stockErr);
       }
-
-      return res.status(200).json({ status: "success", message: "Payment verified successfully" });
-    } else {
-      console.warn("Invalid Razorpay Signature detected for Order:", db_order_id);
-      return res.status(400).json({ status: "failure", message: "Invalid Signature" });
     }
-  } catch (error: any) {
-    console.error("CRITICAL: Razorpay Verification Error:", error);
-    return res.status(500).json({ 
-      status: "error", 
-      message: "Internal server error during verification", 
-      error: error.message 
+
+    await batch.commit();
+    console.log(`[Verify] Stock decremented for ${items.length} item(s).`);
+
+    // --- 6. Send confirmation email (non-blocking) ---
+    const recipientEmail = userEmail || orderData.shippingAddress?.email;
+    if (recipientEmail) {
+      const shortId = db_order_id.substring(0, 8).toUpperCase();
+      const formattedDate = new Date().toLocaleDateString("en-IN", {
+        day: "numeric", month: "long", year: "numeric",
+      });
+
+      const emailHtml = `
+        <h1 style="font-size: 24px; font-weight: bold; text-align: center; margin-bottom: 16px;">Order Confirmed</h1>
+        <p>Hi there,</p>
+        <p>Thank you for your purchase! We're preparing your order for dispatch.</p>
+        <div style="background-color: #f8fafc; padding: 24px; border-radius: 8px; margin: 32px 0; border: 1px solid #e2e8f0; font-size: 14px;">
+          <div style="display: flex; justify-content: space-between; font-weight: bold; border-bottom: 1px solid #e2e8f0; padding-bottom: 16px; margin-bottom: 16px;">
+            <span>Order #${shortId}</span>
+            <span>${formattedDate}</span>
+          </div>
+          <p><strong>Payment ID:</strong> ${razorpay_payment_id}</p>
+          <p><strong>Status:</strong> Processing</p>
+          <div style="border-top: 1px solid #e2e8f0; padding-top: 16px; margin-top: 16px; text-align: right;">
+            <p style="font-size: 18px; margin: 0;">Total Paid: <strong>₹${totalAmount}</strong></p>
+            <p style="font-weight: bold; font-size: 12px; color: #10b981; margin-top: 4px;">Payment Verified ✓</p>
+          </div>
+        </div>
+        <div style="text-align: center; margin-top: 32px;">
+          <a href="https://lyrastylehub.com/account" style="background-color: #000; color: #fff; padding: 12px 32px; text-decoration: none; font-weight: bold; font-size: 12px; letter-spacing: 1px; text-transform: uppercase;">View Order</a>
+        </div>
+      `;
+
+      sendStoreEmail(recipientEmail, `Your LYRA Order Confirmed #${shortId}`, emailHtml)
+        .catch((err: Error) => console.error("[Verify] Confirmation email failed (non-critical):", err.message));
+    }
+
+    return res.status(200).json({ status: "success", message: "Payment verified and order updated." });
+
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    console.error("[Verify] CRITICAL — Firestore update failed:", message);
+    // Payment is verified but DB update failed — this needs alerting in production
+    return res.status(500).json({
+      status: "error",
+      message: "Payment verified but order update failed. Please contact support.",
     });
   }
 }

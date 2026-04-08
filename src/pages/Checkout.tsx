@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowLeft, ShieldCheck, CreditCard, Banknote, Loader2 } from "lucide-react";
+import { ArrowLeft, ShieldCheck, Loader2 } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { useAuth } from "@/context/AuthContext";
 import { formatPrice } from "@/data/products";
@@ -16,21 +16,21 @@ export default function Checkout() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [formData, setFormData] = useState({
-    email: user?.email || "customer@lyra.com",
-    firstName: "Premium",
-    lastName: "Customer",
-    address: "123 Luxury Lane",
-    city: "Mumbai",
-    postalCode: "400001",
-    state: "Maharashtra",
-    phone: user?.phoneNumber || "+91 98765 43210"
+    email: user?.email || "",
+    firstName: "",
+    lastName: "",
+    address: "",
+    city: "",
+    postalCode: "",
+    state: "",
+    phone: user?.phoneNumber || ""
   });
 
   const [promoCodeInput, setPromoCodeInput] = useState("");
   const [appliedPromo, setAppliedPromo] = useState<any>(null);
   const [isApplyingPromo, setIsApplyingPromo] = useState(false);
 
-  const shipping = total > 15000 ? 0 : 500;
+  const shipping = total > 5000 ? 0 : 500;
   
   // Calculate potential discount
   const discountAmount = appliedPromo 
@@ -116,74 +116,51 @@ export default function Checkout() {
       const res = await loadRazorpayScript();
       if (!res) throw new Error("Razorpay SDK failed to load. Are you online?");
 
-      let orderData;
-      try {
-        // 4. Request an Order from our Serverless Backend
-        const orderReq = await fetch("/api/razorpay-order", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          // Passing the created order ID as receipt
-          body: JSON.stringify({ amount: grandTotal, receipt: createdOrder.id }) 
-        });
-        
-        orderData = await orderReq.json();
-        if (!orderReq.ok) throw new Error(orderData.message || "Could not generate order");
-      } catch (backendError) {
-        // Mock fallback for standard Vite dev environment
-        console.warn("Using Demo Gateway mode (Backend unavailable)");
-        orderData = { amount: grandTotal * 100, currency: "INR", id: "order_demo_" + Date.now() };
-      }
+      // 4. Request an Order from our Serverless Backend (throws on failure — no demo bypass)
+      const orderReq = await fetch("/api/razorpay-order", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount: grandTotal, receipt: createdOrder.id })
+      });
+
+      const orderData = await orderReq.json();
+      if (!orderReq.ok) throw new Error(orderData.message || "Could not connect to payment gateway. Please try again.");
 
       // 5. Setup Razorpay Options
       const options = {
-        key: import.meta.env.VITE_RAZORPAY_KEY_ID || "rzp_test_SI3ws113V0vKJZ", 
+        key: import.meta.env.VITE_RAZORPAY_KEY_ID || "", // Fail closed - no fallback key 
         amount: orderData.amount,
         currency: orderData.currency,
         name: "LYRA Style Hub",
         description: "Exquisite Fashion Purchase",
         image: "https://images.unsplash.com/photo-1556821840-3a63f95609a7?q=80&w=150",
         order_id: orderData.id,
-        handler: async function (response: any) {
+        handler: async function (response: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }) {
            try {
-              // 6. Verify Signature via Serverless API and update status
-              // For demo mode, we simulate verification successfully
-              if (response.razorpay_order_id?.startsWith("order_demo_")) {
-                 await new Promise(r => setTimeout(r, 1000)); // Simulate delay
-                 await dataService.orders.updateStatus(createdOrder.id, "processing");
-              } else {
-                const verifyRes = await fetch("/api/razorpay-verify", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({
-                    db_order_id: createdOrder.id,
-                    razorpay_order_id: response.razorpay_order_id,
-                    razorpay_payment_id: response.razorpay_payment_id,
-                    razorpay_signature: response.razorpay_signature,
-                    userEmail: formData.email,
-                    totalAmount: grandTotal
-                  })
-                });
-                if (!verifyRes.ok) throw new Error("Payment signature verification failed");
-              }
+              // 6. Verify signature via Serverless API
+              // Server-side handler also: updates order status, decrements stock, sends confirmation email
+              const verifyRes = await fetch("/api/razorpay-verify", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  db_order_id: createdOrder.id,
+                  razorpay_order_id: response.razorpay_order_id,
+                  razorpay_payment_id: response.razorpay_payment_id,
+                  razorpay_signature: response.razorpay_signature,
+                  userEmail: formData.email,
+                })
+              });
 
-              // 7. Inventory Decrement upon success
-              for (const item of items) {
-                const product = freshProducts.find(p => p?.id === item.id);
-                if (product) {
-                   const variantIdx = product.variants.findIndex(v => v.color === item.color);
-                   if (variantIdx > -1) {
-                     product.variants[variantIdx].stock = Math.max(0, product.variants[variantIdx].stock - item.quantity);
-                     await dataService.products.update(product.id, { variants: product.variants });
-                   }
-                }
-              }
+              const verifyData = await verifyRes.json();
+              if (!verifyRes.ok) throw new Error(verifyData.message || "Payment verification failed");
 
-              toast.success("Payment Successful!", { description: "Your order has been authorized." });
+              toast.success("Payment Successful!", { description: "Your order has been confirmed." });
               clearCart();
               navigate(`/order-confirmation?orderId=${createdOrder.id}`);
-           } catch (err: any) {
-              setErrorMsg(err.message);
-              toast.error("Verification Failed", { description: err.message });
+           } catch (err: unknown) {
+              const message = err instanceof Error ? err.message : "Verification failed";
+              setErrorMsg(message);
+              toast.error("Verification Failed", { description: message });
            }
         },
         prefill: {
@@ -196,32 +173,17 @@ export default function Checkout() {
         },
       };
 
-      // 6. Decide between Real Gateway or Full Demo Mode
-      const isDemoMode = orderData.id.startsWith("order_demo_");
-
-      if (isDemoMode) {
-         console.warn("Demo Mode: Backend API unavailable. Simulating payment flow.");
-         console.warn("To use real Razorpay, run: npx vercel dev --listen 3001");
-         setIsProcessing(true);
-         await new Promise(r => setTimeout(r, 1500));
-         
-         // Simulate success directly without opening Razorpay UI
-         await dataService.orders.updateStatus(createdOrder.id, "processing");
-         toast.success("Demo Payment Successful!", { description: "Run 'npx vercel dev' for real payment processing." });
-         clearCart();
-         navigate(`/order-confirmation?orderId=${createdOrder.id}`);
-         return;
-      }
-
+      // 6. Open Razorpay checkout (requires a real order ID from server)
       const paymentObject = new (window as any).Razorpay(options);
-      paymentObject.on("payment.failed", function (response: any) {
+      paymentObject.on("payment.failed", function (response: { error: { description: string } }) {
         toast.error("Payment Failed", { description: response.error.description });
       });
-      
+
       paymentObject.open();
-    } catch (error: any) {
-      setErrorMsg(error.message);
-      toast.error("Checkout Failed", { description: error.message });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "An unexpected error occurred";
+      setErrorMsg(message);
+      toast.error("Checkout Failed", { description: message });
     } finally {
       setIsProcessing(false);
     }

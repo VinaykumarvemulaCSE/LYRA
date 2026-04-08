@@ -9,6 +9,7 @@ import {
 import { formatPrice } from "@/data/products";
 import { dataService, Product as FirestoreProduct } from "@/services/dataService";
 import { useCart } from "@/context/CartContext";
+import { useWishlist } from "@/context/WishlistContext";
 import ProductCard from "@/components/product/ProductCard";
 import ProductReviews from "@/components/product/ProductReviews";
 import { Analytics } from "@/lib/analytics";
@@ -25,14 +26,16 @@ export default function ProductDetail() {
   const [selectedVariant, setSelectedVariant] = useState(0);
   const [selectedSize, setSelectedSize] = useState("");
   const [selectedImage, setSelectedImage] = useState(0);
-  const [isWishlisted, setIsWishlisted] = useState(false);
+  const { isInWishlist, addToWishlist, removeFromWishlist } = useWishlist();
+  const isWishlisted = product ? isInWishlist(product.id) : false;
   const [justAdded, setJustAdded] = useState(false);
   const [activeTab, setActiveTab] = useState<"description" | "reviews">("description");
   
-  // Zoom State
   const [isZoomed, setIsZoomed] = useState(false);
-  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  const [mousePos, setMousePos] = useState({ x: 50, y: 50 });
   const imageRef = useRef<HTMLDivElement>(null);
+  // Must be declared before any early returns to satisfy Rules of Hooks
+  const [currentUrl, setCurrentUrl] = useState("");
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -57,6 +60,10 @@ export default function ProductDetail() {
     fetchProduct();
     window.scrollTo(0, 0);
   }, [id]);
+
+  useEffect(() => {
+    setCurrentUrl(window.location.href);
+  }, []);
 
   if (loading) {
     return (
@@ -89,21 +96,25 @@ export default function ProductDetail() {
       toast.error("Please select a size", { description: "Choose your size before adding to bag." });
       return;
     }
-    addItem(product, variant.color, selectedSize);
-    setJustAdded(true);
-    setTimeout(() => setJustAdded(false), 2000);
+    const success = addItem(product, variant.color, selectedSize);
+    if (success) {
+      setJustAdded(true);
+      setTimeout(() => setJustAdded(false), 2000);
+    }
   };
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!imageRef.current) return;
     const { left, top, width, height } = imageRef.current.getBoundingClientRect();
-    const x = ((e.pageX - left) / width) * 100;
-    const y = ((e.pageY - top) / height) * 100;
+    const x = ((e.clientX - left) / width) * 100;
+    const y = ((e.clientY - top) / height) * 100;
     setMousePos({ x, y });
   };
 
+
   const handleShare = () => {
-    navigator.clipboard.writeText(window.location.href);
+    const url = currentUrl || window.location.href;
+    navigator.clipboard.writeText(url);
     toast.success("Link copied to clipboard!");
   };
 
@@ -115,7 +126,7 @@ export default function ProductDetail() {
         <meta property="og:title" content={`${product.name} | LYRA`} />
         <meta property="og:description" content={product.description || `Shop the ${product.name} at LYRA. High-quality fashion luxury.`} />
         <meta property="og:image" content={allImages[0]} />
-        <meta property="og:url" content={window.location.href} />
+        <meta property="og:url" content={currentUrl || "https://lyra-stylehub.vercel.app"} />
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content={product.name} />
         <meta name="twitter:description" content={product.description || `Discover ${product.name} at LYRA`} />
@@ -143,15 +154,33 @@ export default function ProductDetail() {
                 }}
               >
                 {allImages.map((img, i) => (
-                  <div key={i} className="flex-shrink-0 w-full h-full snap-center relative">
+                  <div 
+                    key={i} 
+                    className="flex-shrink-0 w-full h-full snap-center relative cursor-zoom-in overflow-hidden"
+                    onMouseEnter={() => setIsZoomed(true)}
+                    onMouseLeave={() => setIsZoomed(false)}
+                    onMouseMove={handleMouseMove}
+                    ref={i === selectedImage ? imageRef : null}
+                  >
                      <motion.img 
                       src={img} 
                       alt={`${product.name} ${i + 1}`} 
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-cover transition-transform duration-200 ease-out"
+                      style={{
+                        transformOrigin: `${mousePos.x}% ${mousePos.y}%`,
+                        scale: isZoomed ? 2.5 : 1,
+                      }}
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       transition={{ duration: 0.5 }}
                     />
+                    
+                    {/* Visual Zoom Indicator */}
+                    {!isZoomed && (
+                      <div className="absolute top-4 right-4 p-2 rounded-full glass-strong text-white/70 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <ZoomIn className="w-4 h-4" />
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -323,8 +352,11 @@ export default function ProductDetail() {
               </Button>
               <button
                 onClick={() => {
-                  setIsWishlisted(!isWishlisted);
-                  if (!isWishlisted) toast.success("Added to wishlist!");
+                  if (isWishlisted) {
+                    removeFromWishlist(product.id);
+                  } else {
+                    addToWishlist(product);
+                  }
                 }}
                 className={`w-14 h-14 rounded-2xl glass-strong flex items-center justify-center transition-all duration-300 group ${isWishlisted ? "text-destructive shadow-inner" : "hover:text-primary"}`}
               >

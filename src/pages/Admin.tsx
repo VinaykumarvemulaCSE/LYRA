@@ -42,12 +42,14 @@ export default function Admin() {
   const [dbProductCount, setDbProductCount] = useState(0);
   const [isDeploying, setIsDeploying] = useState(false);
 
-  // Auth guard
+  // Auth guard - WARNING: Client-side only, bypassable. 
+  // TODO: Implement Firebase Security Rules or server-side admin verification
   useEffect(() => {
     if (loading) return;
     if (!user) { navigate("/auth"); return; }
     const adminEmails = [import.meta.env.VITE_ADMIN_EMAIL || "kumarvinay072007@gmail.com"];
     if (!adminEmails.includes(user.email || "")) {
+      console.warn("Admin access denied - client side check only");
       toast.error("Access Restricted"); navigate("/");
     }
   }, [user, loading, navigate]);

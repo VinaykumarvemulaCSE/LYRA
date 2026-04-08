@@ -33,11 +33,11 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
   const [welcomeName, setWelcomeName] = useState("");
 
   useEffect(() => {
-    // 5-second safety timeout to prevent infinite blank screen if Firebase hangs
+    // 10-second safety timeout to prevent infinite blank screen if Firebase hangs
     const timeout = setTimeout(() => {
       setLoading(false);
-      console.warn("Auth initialization timed out. Check your Firebase config.");
-    }, 5000);
+      console.warn("Auth initialization timed out. Check your Firebase config or network connection.");
+    }, 10000);
 
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       clearTimeout(timeout);

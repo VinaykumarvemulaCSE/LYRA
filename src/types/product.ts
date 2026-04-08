@@ -1,3 +1,5 @@
+import type { Timestamp, FieldValue } from "firebase/firestore";
+
 export interface ProductVariant {
   color: string;
   colorHex: string;
@@ -23,12 +25,12 @@ export interface Product {
   image: string;
   images: string[];
   variants: ProductVariant[];
-  
-  // Timestamps (could be Firestore Timestamp or Date)
-  createdAt?: any;
-  updatedAt?: any;
-  
-  // Legacy flat fields for backward compatibility, if needed
+
+  // Timestamps — Firestore Timestamp, FieldValue (serverTimestamp), or plain Date
+  createdAt?: Timestamp | FieldValue | Date | null;
+  updatedAt?: Timestamp | FieldValue | Date | null;
+
+  // Legacy flat fields for backward compatibility
   sizes?: string[];
   colors?: string[];
 }

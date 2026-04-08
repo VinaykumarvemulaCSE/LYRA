@@ -166,6 +166,10 @@ export const dataService = {
     async updateRole(uid: string, role: 'admin' | 'user' | 'vip') {
       const ref = doc(db, "users", uid);
       return await updateDoc(ref, { role });
+    },
+    async updateWishlist(uid: string, wishlist: any[]) {
+      const ref = doc(db, "users", uid);
+      return await updateDoc(ref, { wishlist, updatedAt: serverTimestamp() });
     }
   },
 

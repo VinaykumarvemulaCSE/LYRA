@@ -1,41 +1,36 @@
 import nodemailer from "nodemailer";
+import type { Transporter } from "nodemailer";
 
-// Using env or ethereal email for testing
-const getTransporter = async () => {
-    // If user provided real gmail credentials
-    const user = process.env.VITE_EMAIL_USER || process.env.EMAIL_USER;
-    const pass = process.env.VITE_EMAIL_APP_PASSWORD || process.env.EMAIL_APP_PASSWORD;
+/**
+ * Creates a Nodemailer transporter using server-only Gmail credentials.
+ *
+ * IMPORTANT: Never read VITE_ prefixed variables here — those are baked
+ * into the client bundle by Vite and are visible to anyone in DevTools.
+ * Only read plain server-side env vars: EMAIL_USER, EMAIL_APP_PASSWORD.
+ *
+ * Throws a clear error if credentials are missing instead of silently
+ * falling back to Ethereal (which would swallow production emails).
+ */
+const getTransporter = (): Transporter => {
+    const user = process.env.EMAIL_USER;
+    const pass = process.env.EMAIL_APP_PASSWORD;
 
-    console.log("Email Utility Init - User:", user ? "FOUND" : "MISSING");
-    console.log("Email Utility Init - Pass:", pass ? "FOUND" : "MISSING");
-
-    if (user && pass) {
-        console.log("Using GMAIL SMTP Service...");
-        return nodemailer.createTransport({
-            service: "gmail",
-            auth: { user, pass }
-        });
+    if (!user || !pass) {
+        throw new Error(
+            "Email credentials not configured. " +
+            "Set EMAIL_USER and EMAIL_APP_PASSWORD in Vercel environment variables."
+        );
     }
 
-    console.log("Falling back to ETHEREAL Mock Service...");
-
-    // Fallback to free ethereal email for easy debugging if user didn't set up gmail yet.
-    // It captures emails and generates a preview URL.
-    const testAccount = await nodemailer.createTestAccount();
     return nodemailer.createTransport({
-        host: "smtp.ethereal.email",
-        port: 587,
-        secure: false, // true for 465, false for other ports
-        auth: {
-            user: testAccount.user, // generated ethereal user
-            pass: testAccount.pass, // generated ethereal password
-        },
+        service: "gmail",
+        auth: { user, pass },
     });
 };
 
-// Standard LYRA store styling matching the EmailPreviews.tsx
-export const sendStoreEmail = async (to: string, subject: string, htmlContent: string) => {
-    const transporter = await getTransporter();
+// Standard LYRA store email layout
+export const sendStoreEmail = async (to: string, subject: string, htmlContent: string): Promise<void> => {
+    const transporter = getTransporter();
 
     const layout = `
     <div style="max-width: 600px; margin: 0 auto; font-family: Helvetica, sans-serif; color: #000; border: 1px solid #eaeaea; border-radius: 8px; overflow: hidden;">
@@ -46,31 +41,18 @@ export const sendStoreEmail = async (to: string, subject: string, htmlContent: s
             ${htmlContent}
         </div>
         <div style="border-top: 1px solid #eaeaea; padding: 24px; text-align: center; color: #64748b; font-size: 12px;">
-            <p style="margin: 0;">© 2024 LYRA Style Hub. All rights reserved.</p>
-            <p style="margin: 8px 0 0;">123 Luxury Lane, Bandra West, Mumbai 400050</p>
+            <p style="margin: 0;">© ${new Date().getFullYear()} LYRA Style Hub. All rights reserved.</p>
+            <p style="margin: 8px 0 0;">Mumbai, India</p>
         </div>
     </div>
     `;
 
-    try {
-        const info = await transporter.sendMail({
-            from: '"LYRA Support" <hello@lyrastylehub.com>', 
-            to: to,
-            subject: subject,
-            html: layout,
-        });
+    const info = await transporter.sendMail({
+        from: '"LYRA Support" <hello@lyrastylehub.com>',
+        to,
+        subject,
+        html: layout,
+    });
 
-        console.log("Message sent to", to, " | ID:", info.messageId);
-        
-        const previewUrl = nodemailer.getTestMessageUrl(info);
-        if (previewUrl) {
-            console.log("Preview URL: %s", previewUrl);
-        }
-        
-        return previewUrl; 
-    } catch (err: any) {
-        console.error("Critical: Nodemailer failed to send email to", to);
-        console.error("Error details:", err);
-        throw err;
-    }
-}
+    console.log(`[Email] Sent to ${to} | ID: ${info.messageId}`);
+};

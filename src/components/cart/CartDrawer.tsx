@@ -2,17 +2,30 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "react-router-dom";
 import { X, Plus, Minus, ShoppingBag, Truck, ArrowRight, Zap } from "lucide-react";
 import { useCart } from "@/context/CartContext";
-import { formatPrice, products } from "@/data/products";
+import { formatPrice } from "@/data/products";
 import { Button } from "@/components/ui/button";
+import { dataService, Product as FirestoreProduct } from "@/services/dataService";
+import { useState, useEffect } from "react";
 
 export default function CartDrawer() {
-  const { items, isOpen, setIsOpen, removeItem, updateQuantity, totalPrice, totalItems } = useCart();
+  const { items, isOpen, setIsOpen, removeItem, updateQuantity, totalPrice, totalItems, clearCart } = useCart();
+  const [trendingProducts, setTrendingProducts] = useState<FirestoreProduct[]>([]);
   
-  const shippingThreshold = 2000;
+  useEffect(() => {
+    const fetchTrending = async () => {
+      try {
+        const products = await dataService.products.getAll(3);
+        setTrendingProducts(products.slice(0, 3));
+      } catch (err) {
+        console.error("Failed to fetch trending products", err);
+      }
+    };
+    if (isOpen) fetchTrending();
+  }, [isOpen]);
+  
+  const shippingThreshold = 5000;
   const shippingProgress = Math.min((totalPrice / shippingThreshold) * 100, 100);
   const remainingForFreeShipping = shippingThreshold - totalPrice;
-
-  const trendingProducts = products.slice(0, 3);
 
   return (
     <AnimatePresence>
@@ -32,11 +45,20 @@ export default function CartDrawer() {
             transition={{ type: "spring", damping: 30, stiffness: 300 }}
             className="fixed right-0 top-0 bottom-0 z-50 w-full max-w-md bg-background border-l border-border flex flex-col shadow-2xl"
           >
-            {/* Header */}
             <div className="flex items-center justify-between p-6 border-b border-border">
               <div>
                 <h2 className="font-heading text-lg font-bold">Your Bag</h2>
-                <p className="text-xs text-muted-foreground">{totalItems} {totalItems === 1 ? "item" : "items"}</p>
+                <div className="flex items-center gap-3">
+                  <p className="text-xs text-muted-foreground">{totalItems} {totalItems === 1 ? "item" : "items"}</p>
+                  {items.length > 0 && (
+                    <button 
+                      onClick={() => { if(confirm("Clear your luxury selection?")) clearCart(); }}
+                      className="text-[10px] font-bold text-destructive/60 hover:text-destructive uppercase tracking-widest transition-colors"
+                    >
+                      &middot; Clear Bag
+                    </button>
+                  )}
+                </div>
               </div>
               <button onClick={() => setIsOpen(false)} className="p-2 rounded-xl hover:bg-secondary transition-colors" aria-label="Close cart">
                 <X className="w-5 h-5" />
@@ -210,4 +232,4 @@ export default function CartDrawer() {
       )}
     </AnimatePresence>
   );
-}
+}

@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from "react";
+import { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from "react";
 import { toast } from "sonner";
 import { Product } from "@/types/product";
 import { useAuth } from "./AuthContext";
@@ -15,7 +15,7 @@ interface CartContextType {
   items: CartItem[];
   isOpen: boolean;
   setIsOpen: (open: boolean) => void;
-  addItem: (product: Product, color: string, size: string) => void;
+  addItem: (product: Product, color: string, size: string) => boolean;
   removeItem: (productId: string, color: string, size: string) => void;
   updateQuantity: (productId: string, color: string, size: string, quantity: number) => void;
   totalItems: number;
@@ -56,41 +56,65 @@ export function CartProvider({ children }: { children: ReactNode }) {
     fetchCloudCart();
   }, [user, isCloudSynced]);
 
-  // 2. Persist Local and Sync to Cloud on Changes
+  // 2. Persist Local immediately
   useEffect(() => {
     localStorage.setItem("lyra_cart", JSON.stringify(items));
-    if (user && isCloudSynced) {
-       dataService.carts.sync(user.uid, items).catch(e => console.error("Cloud cart error", e));
+  }, [items]);
+
+  // 3. Debounced Cloud Sync (prevents excessive Firestore writes)
+  const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  useEffect(() => {
+    if (!user || !isCloudSynced) return;
+    
+    if (syncTimeoutRef.current) {
+      clearTimeout(syncTimeoutRef.current);
     }
+    
+    syncTimeoutRef.current = setTimeout(() => {
+      dataService.carts.sync(user.uid, items).catch(e => console.error("Cloud cart error", e));
+    }, 2000); // 2 second debounce
+    
+    return () => {
+      if (syncTimeoutRef.current) {
+        clearTimeout(syncTimeoutRef.current);
+      }
+    };
   }, [items, user, isCloudSynced]);
 
   const addItem = useCallback((product: Product, color: string, size: string) => {
+    let success = false;
     setItems((prev) => {
       const variant = product.variants?.find(v => v.color === color);
       const stock = variant ? variant.stock : 1;
 
-      const existing = prev.find(
+      const existingIdx = prev.findIndex(
         (i) => i.product.id === product.id && i.selectedColor === color && i.selectedSize === size
       );
-      if (existing) {
-        if (existing.quantity >= stock) {
+
+      if (existingIdx > -1) {
+        if (prev[existingIdx].quantity >= stock) {
           toast.error("Stock Limit Reached", { description: "You cannot add more of this item." });
           return prev;
         }
-        return prev.map((i) =>
-          i.product.id === product.id && i.selectedColor === color && i.selectedSize === size
-            ? { ...i, quantity: i.quantity + 1 }
-            : i
-        );
+        success = true;
+        const newItems = [...prev];
+        newItems[existingIdx] = { ...newItems[existingIdx], quantity: newItems[existingIdx].quantity + 1 };
+        return newItems;
       }
 
       if (stock < 1) {
         toast.error("Out of Stock", { description: "This variant is currently out of stock." });
         return prev;
       }
+      
+      success = true;
       return [...prev, { product, quantity: 1, selectedColor: color, selectedSize: size }];
     });
-    setIsOpen(true);
+    
+    if (success) {
+      setIsOpen(true);
+    }
+    return success;
   }, []);
 
   const removeItem = useCallback((productId: string, color: string, size: string) => {

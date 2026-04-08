@@ -31,8 +31,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     await sendStoreEmail(email, `Shipping Update: Order #${orderId.substring(0, 8).toUpperCase()} is out!`, htmlContent);
 
     return res.status(200).json({ success: true, message: "Shipping notification sent" });
-  } catch (error: any) {
-    console.error("Shipping Email Error:", error);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    console.error("Shipping Email Error:", message);
     return res.status(500).json({ success: false, message: "Failed to send shipping email" });
   }
 }

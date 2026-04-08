@@ -31,8 +31,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     await sendStoreEmail(email, "Welcome to the LYRA Elite Club", htmlContent);
 
     return res.status(200).json({ success: true, message: "Welcome email sent" });
-  } catch (error: any) {
-    console.error("Welcome Email Error:", error);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    console.error("Welcome Email Error:", message);
     return res.status(500).json({ success: false, message: "Failed to send welcome email" });
   }
 }

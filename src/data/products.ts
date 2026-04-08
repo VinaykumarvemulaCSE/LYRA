@@ -150,8 +150,8 @@ export const products: Product[] = [
     ecoLabels: ["Cruelty-Free Wool"],
     inStock: true,
     isNew: true,
-    image: "https://images.unsplash.com/photo-1591369822096-ffd140ec948f?q=80&w=736",
-    images: ["https://images.unsplash.com/photo-1591369822096-ffd140ec948f?q=80&w=736"],
+    image: "https://images.unsplash.com/photo-1548142813-c348350df52b?q=80&w=736",
+    images: ["https://images.unsplash.com/photo-1548142813-c348350df52b?q=80&w=736"],
     variants: [
       { color: "Camel", colorHex: "#C19A6B", sizes: ["XS", "S", "M", "L"], stock: 12 },
       { color: "Navy", colorHex: "#000080", sizes: ["S", "M", "L"], stock: 8 }
@@ -292,8 +292,8 @@ export const products: Product[] = [
     ecoLabels: ["Recycled Ocean Plastics"],
     inStock: true,
     isNew: false,
-    image: "https://images.unsplash.com/photo-1560923233-a26f634ade5c?q=80&w=736",
-    images: ["https://images.unsplash.com/photo-1560923233-a26f634ade5c?q=80&w=736"],
+    image: "https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?q=80&w=736",
+    images: ["https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?q=80&w=736"],
     variants: [{ color: "Onyx", colorHex: "#000000", sizes: ["XS", "S", "M", "L"], stock: 12 }]
   },
   {
@@ -345,6 +345,7 @@ export const products: Product[] = [
     isNew: true,
     image: "https://images.unsplash.com/photo-1543163521-1bf539c55dd2?q=80&w=736",
     images: ["https://images.unsplash.com/photo-1543163521-1bf539c55dd2?q=80&w=736"],
+    originalPrice: 35000,
     variants: [{ color: "Crimson", colorHex: "#DC143C", sizes: ["us5", "us6", "us7", "us8", "us9"], stock: 0 }]
   },
   {

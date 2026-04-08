@@ -29,13 +29,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       </div>
     `;
 
-    // Send it to the store admin (or the user who submitted it if you want to send a receipt)
-    const adminEmail = process.env.VITE_ADMIN_EMAIL || "kumarvinay072007@gmail.com";
-    const previewUrl = await sendStoreEmail(adminEmail, `[Contact Form] ${subject}`, htmlContent);
+    const adminEmail = process.env.ADMIN_EMAIL;
+    if (!adminEmail) {
+      console.error("[Contact] ADMIN_EMAIL env var not configured.");
+      return res.status(500).json({ message: "Email recipient not configured." });
+    }
+    await sendStoreEmail(adminEmail, `[Contact Form] ${subject || "No Subject"}`, htmlContent);
 
-    return res.status(200).json({ status: "success", previewUrl });
-  } catch (error: any) {
-    console.error("Contact Form Error:", error);
-    return res.status(500).json({ message: "Failed to send message", error: error.message });
+    return res.status(200).json({ status: "success" });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    console.error("Contact Form Error:", message);
+    return res.status(500).json({ message: "Failed to send message", error: message });
   }
 }

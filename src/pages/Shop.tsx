@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { SlidersHorizontal, ChevronDown, Filter, X, Loader2 } from "lucide-react";
+import { SlidersHorizontal, ChevronDown, Filter, X, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import ProductCard from "@/components/product/ProductCard";
 import { categories, getPriceRange, products as staticProducts } from "@/data/products";
 import { dataService, Product as FirestoreProduct } from "@/services/dataService";
@@ -32,6 +32,10 @@ export default function Shop() {
   // Start with static products so the page is never empty on first render
   const [dbProducts, setDbProducts] = useState<FirestoreProduct[]>(staticProducts as FirestoreProduct[]);
   const [loading, setLoading] = useState(false);
+  
+  // Pagination
+  const ITEMS_PER_PAGE = 12;
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -86,6 +90,19 @@ export default function Shop() {
     if (sortBy === "newest") result = [...result].sort((a, b) => (b.isNew ? 1 : 0) - (a.isNew ? 1 : 0));
     
     return result;
+  }, [activeCategory, activeSubCategories, activeMaterials, priceRange, sortBy, dbProducts]);
+
+  // Pagination logic
+  const paginatedProducts = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filtered.slice(start, start + ITEMS_PER_PAGE);
+  }, [filtered, currentPage]);
+
+  const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
+  
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
   }, [activeCategory, activeSubCategories, activeMaterials, priceRange, sortBy]);
 
   const toggleSubCategory = (sub: string) => {
@@ -250,7 +267,8 @@ export default function Shop() {
           <div className="flex-1">
             <div className="flex items-center justify-between mb-6">
               <p className="text-xs text-muted-foreground font-medium">
-                Showing {filtered.length} {filtered.length === 1 ? "product" : "products"}
+                Showing {paginatedProducts.length} of {filtered.length} {filtered.length === 1 ? "product" : "products"}
+                {totalPages > 1 && ` • Page ${currentPage} of ${totalPages}`}
               </p>
             </div>
 
@@ -268,14 +286,51 @@ export default function Shop() {
                   ))}
                 </div>
               ) : (
-                <motion.div 
-                  layout 
-                  className="grid grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6"
-                >
-                  {filtered.map((product, i) => (
-                    <ProductCard key={product.id} product={product} index={i} />
-                  ))}
-                </motion.div>
+                <>
+                  <motion.div 
+                    layout 
+                    className="grid grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6"
+                  >
+                    {paginatedProducts.map((product, i) => (
+                      <ProductCard key={product.id} product={product} index={i} />
+                    ))}
+                  </motion.div>
+                  
+                  {/* Pagination Controls */}
+                  {totalPages > 1 && (
+                    <div className="flex items-center justify-center gap-2 mt-8">
+                      <button
+                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                        disabled={currentPage === 1}
+                        className="p-2 rounded-xl glass-subtle disabled:opacity-30 hover:bg-secondary transition-colors"
+                      >
+                        <ChevronLeft className="w-5 h-5" />
+                      </button>
+                      
+                      {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                        <button
+                          key={page}
+                          onClick={() => setCurrentPage(page)}
+                          className={`w-10 h-10 rounded-xl text-sm font-bold transition-all ${
+                            currentPage === page 
+                              ? "gradient-primary text-primary-foreground" 
+                              : "glass-subtle hover:bg-secondary"
+                          }`}
+                        >
+                          {page}
+                        </button>
+                      ))}
+                      
+                      <button
+                        onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                        disabled={currentPage === totalPages}
+                        className="p-2 rounded-xl glass-subtle disabled:opacity-30 hover:bg-secondary transition-colors"
+                      >
+                        <ChevronRight className="w-5 h-5" />
+                      </button>
+                    </div>
+                  )}
+                </>
               )}
             </AnimatePresence>
 

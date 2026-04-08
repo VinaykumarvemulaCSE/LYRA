@@ -111,6 +111,7 @@ export default function Checkout() {
         paymentId: ""
       };
       const createdOrder = await dataService.orders.create(dbOrder as any);
+      if (!createdOrder?.id) throw new Error("Order system unavailable. Please try again.");
 
       // 3. Load Razorpay script
       const res = await loadRazorpayScript();

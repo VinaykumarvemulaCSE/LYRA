@@ -10,8 +10,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     timestamp: new Date().toISOString(),
     env: {
       FIREBASE_JSON: { status: "missing", detail: "" },
-      RAZORPAY_KEY: { status: "missing" },
-      EMAIL_USER: { status: "missing" }
+      FIREBASE_INDIVIDUAL: { status: "missing", detail: "" },
+      RAZORPAY_KEY: { status: "missing", detail: "" },
+      EMAIL_SMTP: { status: "missing", detail: "" }
     },
     database: { status: "unchecked" }
   };
@@ -37,21 +38,59 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       results.env.FIREBASE_JSON.status = "truncated";
       results.env.FIREBASE_JSON.detail = `Starts with { (${start}), Ends with } (${end}). Length: ${trimmed.length}`;
       if (!end) {
-        results.env.FIREBASE_JSON.advice = "Your JSON is cut off. Ensure it is wrapped in single quotes '' in your .env or pasted fully in Vercel.";
+        results.env.FIREBASE_JSON.advice = "Your JSON is cut off. Switch to using FB_PROJECT_ID, FB_CLIENT_EMAIL, and FB_PRIVATE_KEY instead.";
       }
     }
   }
 
-  // 2. Check Razorpay
-  if (process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET) {
-    results.env.RAZORPAY_KEY.status = "present";
+  // 1.5 Check Firebase Individual Variables
+  const fbProjectId = process.env.FB_PROJECT_ID;
+  const fbClientEmail = process.env.FB_CLIENT_EMAIL;
+  const fbPrivateKey = process.env.FB_PRIVATE_KEY;
+  if (fbProjectId && fbClientEmail && fbPrivateKey) {
+    results.env.FIREBASE_INDIVIDUAL.status = "present";
+    results.env.FIREBASE_INDIVIDUAL.detail = `ID: ${fbProjectId}, Email: ${fbClientEmail}, Key length: ${fbPrivateKey.length}`;
+  } else if (fbProjectId || fbClientEmail || fbPrivateKey) {
+    results.env.FIREBASE_INDIVIDUAL.status = "partial";
+    results.env.FIREBASE_INDIVIDUAL.detail = `Missing pieces. ID: ${!!fbProjectId}, Email: ${!!fbClientEmail}, Key: ${!!fbPrivateKey}`;
+    results.env.FIREBASE_INDIVIDUAL.advice = "You must provide all 3: FB_PROJECT_ID, FB_CLIENT_EMAIL, and FB_PRIVATE_KEY";
   }
 
-  // 3. Test Firebase Connection
+  // 2. Check Razorpay
+  const rpId = process.env.RAZORPAY_KEY_ID;
+  const rpSecret = process.env.RAZORPAY_KEY_SECRET;
+  if (rpId && rpSecret) {
+    results.env.RAZORPAY_KEY.status = "present";
+    results.env.RAZORPAY_KEY.detail = `Both keys present. ID starts with ${rpId.substring(0, 8)}`;
+  } else {
+    results.env.RAZORPAY_KEY.detail = `Missing pieces. ID: ${!!rpId}, Secret: ${!!rpSecret}`;
+    if (!rpId || !rpSecret) results.env.RAZORPAY_KEY.advice = "Ensure both RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET are set.";
+  }
+
+  // 3. Check Email SMTP
+  const emUser = process.env.EMAIL_USER;
+  const emPass = process.env.EMAIL_APP_PASSWORD;
+  if (emUser && emPass) {
+    results.env.EMAIL_SMTP.status = "present";
+    results.env.EMAIL_SMTP.detail = `User: ${emUser}`;
+  } else {
+    results.env.EMAIL_SMTP.detail = `Missing pieces. User: ${!!emUser}, Password: ${!!emPass}`;
+    if (!emUser || !emPass) results.env.EMAIL_SMTP.advice = "Ensure both EMAIL_USER and EMAIL_APP_PASSWORD are set.";
+  }
+
+  // 4. Test Firebase Connection
   try {
-    if (getApps().length === 0 && fbJson) {
-      const serviceAccount = JSON.parse(fbJson);
-      initializeApp({ credential: cert(serviceAccount) });
+    if (getApps().length === 0) {
+      if (fbJson && fbJson.trim().startsWith("{")) {
+        const serviceAccount = JSON.parse(fbJson);
+        initializeApp({ credential: cert(serviceAccount) });
+      } else if (fbProjectId && fbClientEmail && fbPrivateKey) {
+        initializeApp({ credential: cert({
+          projectId: fbProjectId,
+          clientEmail: fbClientEmail,
+          privateKey: fbPrivateKey.replace(/\\n/g, '\n'),
+        }) });
+      }
     }
     const db = getFirestore();
     const testSnap = await db.collection("products").limit(1).get();

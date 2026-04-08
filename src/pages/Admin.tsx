@@ -766,9 +766,10 @@ export default function Admin() {
                       <h3 className="font-heading font-bold mb-4 flex items-center gap-2"><Terminal className="w-4 h-4 text-primary" /> Environment Variables</h3>
                       <div className="space-y-4">
                         {[
-                          { name: "FIREBASE_SERVICE_ACCOUNT_JSON", status: diagResults.env?.FIREBASE_JSON?.status || 'missing', detail: diagResults.env?.FIREBASE_JSON?.detail, advice: diagResults.env?.FIREBASE_JSON?.advice },
-                          { name: "RAZORPAY_KEYS", status: diagResults.env?.RAZORPAY_KEY?.status || 'missing' },
-                          { name: "EMAIL_SMTP", status: diagResults.env?.EMAIL_USER?.status || 'missing' }
+                          { name: "FIREBASE_JSON", status: diagResults.env?.FIREBASE_JSON?.status || 'missing', detail: diagResults.env?.FIREBASE_JSON?.detail, advice: diagResults.env?.FIREBASE_JSON?.advice },
+                          { name: "FIREBASE_INDIVIDUAL", status: diagResults.env?.FIREBASE_INDIVIDUAL?.status || 'missing', detail: diagResults.env?.FIREBASE_INDIVIDUAL?.detail, advice: diagResults.env?.FIREBASE_INDIVIDUAL?.advice },
+                          { name: "RAZORPAY_KEYS", status: diagResults.env?.RAZORPAY_KEY?.status || 'missing', detail: diagResults.env?.RAZORPAY_KEY?.detail, advice: diagResults.env?.RAZORPAY_KEY?.advice },
+                          { name: "EMAIL_SMTP", status: diagResults.env?.EMAIL_SMTP?.status || 'missing', detail: diagResults.env?.EMAIL_SMTP?.detail, advice: diagResults.env?.EMAIL_SMTP?.advice }
                         ].map(v => (
                           <div key={v.name} className={`p-4 rounded-xl border-l-4 ${v.status === 'valid_format' || v.status === 'present' ? 'bg-emerald-500/5 border-emerald-500' : 'bg-destructive/5 border-destructive'}`}>
                             <div className="flex justify-between items-start mb-1">

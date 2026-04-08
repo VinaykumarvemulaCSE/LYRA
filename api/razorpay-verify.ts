@@ -9,10 +9,21 @@ const getAdminDb = () => {
   try {
     if (getApps().length === 0) {
       const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
-      if (!serviceAccountJson) {
-        throw new Error("Missing FIREBASE_SERVICE_ACCOUNT_JSON environment variable.");
+      let serviceAccount;
+
+      if (serviceAccountJson && serviceAccountJson.trim().startsWith("{")) {
+        serviceAccount = JSON.parse(serviceAccountJson);
+      } else if (process.env.FB_PROJECT_ID && process.env.FB_CLIENT_EMAIL && process.env.FB_PRIVATE_KEY) {
+        serviceAccount = {
+          projectId: process.env.FB_PROJECT_ID,
+          clientEmail: process.env.FB_CLIENT_EMAIL,
+          // Replace escaped newlines if they exist
+          privateKey: process.env.FB_PRIVATE_KEY.replace(/\\n/g, '\n'),
+        };
+      } else {
+        throw new Error("Missing Firebase credentials. Provide either FIREBASE_SERVICE_ACCOUNT_JSON or FB_PROJECT_ID/FB_CLIENT_EMAIL/FB_PRIVATE_KEY.");
       }
-      const serviceAccount = JSON.parse(serviceAccountJson);
+      
       initializeApp({ credential: cert(serviceAccount) });
     }
     return getFirestore();

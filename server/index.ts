@@ -16,6 +16,7 @@ try {
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+console.log("[LYRA] Booting v2.0.1 (Express 5 Audited)...");
 
 app.use(helmet());
 app.use(cors({

@@ -3,18 +3,23 @@ import razorpayRouter from "./razorpay";
 import emailRouter from "./email";
 import uploadRouter from "./upload";
 import adminRouter from "./admin";
-import promotionsRouter from "./promotions";
 
 export const registerRoutes = (app: Express): void => {
-  app.use("/api/razorpay", razorpayRouter);
-  app.use("/api/email", emailRouter);
-  app.use("/api/upload", uploadRouter);
+  // Support both flat paths (Vercel style) and nested paths (Legacy style)
+  
+  // 1. ADMIN
   app.use("/api/admin", adminRouter);
-  app.use("/api/promotions", promotionsRouter);
 
-  // Legacy alias: /api/contact → /api/email/contact
-  app.post("/api/contact", (req: Request, res: Response, next: NextFunction) => {
-    req.url = "/contact";
-    emailRouter(req, res, next);
-  });
+  // 2. EMAIL
+  app.use("/api/email", emailRouter);
+  app.post("/api/contact", (req, res, next) => { req.query.type = "contact"; emailRouter(req, res, next); });
+
+  // 3. RAZORPAY
+  // Map flat Vercel-style routes to specific Router methods
+  app.post("/api/razorpay-order", (req, res, next) => { req.url = "/order"; razorpayRouter(req, res, next); });
+  app.post("/api/razorpay-verify", (req, res, next) => { req.url = "/verify"; razorpayRouter(req, res, next); });
+  app.use("/api/razorpay", razorpayRouter);
+
+  // 4. UPLOAD
+  app.use("/api/upload", uploadRouter);
 };

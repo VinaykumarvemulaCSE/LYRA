@@ -6,13 +6,7 @@ import path from "path";
 import fs from "fs";
 import { registerRoutes } from "./routes";
 
-// Load .env only in local development — Render/Vercel inject env vars directly
-try {
-  const dotenv = await import("dotenv");
-  dotenv.config();
-} catch (e) {
-  // dotenv not available or not needed in production
-}
+import "dotenv/config";
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -35,7 +29,7 @@ app.use(helmet({
 app.use(cors({
   origin: process.env.CLIENT_URL || "*",
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"],
+  allowedHeaders: ["Content-Type", "Authorization", "x-csrf-token"],
   credentials: true,
 }));
 app.use(express.json({ limit: "10mb" }));

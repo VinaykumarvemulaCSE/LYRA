@@ -2,10 +2,15 @@ import express, { Request, Response } from "express";
 import cors from "cors";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
-import { config } from "dotenv";
 import { registerRoutes } from "./routes";
 
-config();
+// Load .env only in local development — Render injects env vars directly
+try {
+  const dotenv = require("dotenv");
+  dotenv.config();
+} catch {
+  // dotenv not available in production — that's fine
+}
 
 const app = express();
 const PORT = process.env.PORT || 3001;

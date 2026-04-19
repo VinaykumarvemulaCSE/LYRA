@@ -21,11 +21,13 @@ console.log("[LYRA] Booting v2.0.1 (Express 5 Audited)...");
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
-      ...helmet.contentSecurityPolicy.getDefaultDirectives(),
-      "connect-src": ["'self'", "https://*.googleapis.com", "https://*.firebaseio.com", "https://*.firebase.com"],
+      "default-src": ["'self'"],
+      "connect-src": ["'self'", "https://*.googleapis.com", "https://*.firebaseio.com", "https://*.firebase.com", "https://*.cloudfunctions.net"],
       "script-src": ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://*.googleapis.com", "https://*.firebase.com"],
-      "img-src": ["'self'", "data:", "https://firebasestorage.googleapis.com", "https://*.githubusercontent.com", "https://*.cloudinary.com"],
-      "frame-src": ["'self'", "https://*.firebaseapp.com", "https://*.firebase.com"]
+      "img-src": ["'self'", "data:", "blob:", "https://firebasestorage.googleapis.com", "https://*.githubusercontent.com", "https://*.cloudinary.com", "https://*.google.com"],
+      "frame-src": ["'self'", "https://*.firebaseapp.com", "https://*.firebase.com"],
+      "style-src": ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      "font-src": ["'self'", "https://fonts.gstatic.com"]
     }
   }
 }));

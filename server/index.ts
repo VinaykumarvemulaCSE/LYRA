@@ -6,12 +6,12 @@ import path from "path";
 import fs from "fs";
 import { registerRoutes } from "./routes";
 
-// Load .env only in local development — Render injects env vars directly
+// Load .env only in local development — Render/Vercel inject env vars directly
 try {
-  const dotenv = require("dotenv");
+  const dotenv = await import("dotenv");
   dotenv.config();
-} catch {
-  // dotenv not available in production — that's fine
+} catch (e) {
+  // dotenv not available or not needed in production
 }
 
 const app = express();

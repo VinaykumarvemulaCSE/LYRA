@@ -1,5 +1,5 @@
 import { Router, Request, Response } from "express";
-import { adminDb } from "../utils/firebase";
+import { getAdminDb } from "../utils/firebase";
 
 const router = Router();
 
@@ -11,12 +11,10 @@ router.post("/validate", async (req: Request, res: Response) => {
       return res.status(400).json({ message: "Promo code is required" });
     }
 
-    if (!adminDb) {
-      return res.status(500).json({ message: "Database offline" });
-    }
+    const db = getAdminDb();
 
     // Query for the active promo code
-    const promoQuery = await adminDb.collection("promotions")
+    const promoQuery = await db.collection("promotions")
       .where("code", "==", code.toUpperCase())
       .where("active", "==", true)
       .limit(1)

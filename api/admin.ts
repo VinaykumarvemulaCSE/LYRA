@@ -7,9 +7,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // 1. Auth & CSRF Check (Admin Only)
   const isAdmin = await verifyAdmin(req);
   if (!isAdmin) return res.status(403).json({ message: "Admin access required" });
-  if (!verifyCsrfToken(req)) return res.status(403).json({ message: "CSRF token invalid" });
 
-  const { action } = req.body || req.query;
+  const { action } = (req.method === "GET" ? req.query : req.body) || {};
 
   // --- DIAGNOSTICS LOGIC ---
   if (req.method === "GET" || action === "diagnostics") {
@@ -35,23 +34,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
     }
 
-    const fbProjectId = process.env.FB_PROJECT_ID;
-    const fbClientEmail = process.env.FB_CLIENT_EMAIL;
-    const fbPrivateKey = process.env.FB_PRIVATE_KEY;
-    if (fbProjectId && fbClientEmail && fbPrivateKey) {
+    if (process.env.FB_PROJECT_ID && process.env.FB_CLIENT_EMAIL && process.env.FB_PRIVATE_KEY) {
       results.env.FIREBASE_INDIVIDUAL.status = "healthy";
     }
 
-    const rpId = process.env.RAZORPAY_KEY_ID || process.env.VITE_RAZORPAY_KEY_ID;
-    const rpSecret = process.env.RAZORPAY_KEY_SECRET;
-    if (rpId && rpSecret) results.env.RAZORPAY_KEY.status = "healthy";
+    if ((process.env.RAZORPAY_KEY_ID || process.env.VITE_RAZORPAY_KEY_ID) && process.env.RAZORPAY_KEY_SECRET) {
+      results.env.RAZORPAY_KEY.status = "healthy";
+    }
 
-    const emUser = process.env.EMAIL_USER;
-    const emPass = process.env.EMAIL_APP_PASSWORD;
-    if (emUser && emPass) results.env.EMAIL_SMTP.status = "healthy";
+    if (process.env.EMAIL_USER && process.env.EMAIL_APP_PASSWORD) {
+      results.env.EMAIL_SMTP.status = "healthy";
+    }
 
-    const ghToken = process.env.GITHUB_TOKEN;
-    if (ghToken) results.env.GITHUB_CMS.status = "healthy";
+    if (process.env.GITHUB_TOKEN) {
+      results.env.GITHUB_CMS.status = "healthy";
+    }
 
     try {
       const adminDb = getAdminDb();
@@ -93,8 +90,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         products.forEach((doc: any) => {
           const data = doc.data();
           if (data.variants) {
-             const updatedVariants = data.variants.map((v: any) => ({ ...v, stock: 10 }));
-             batch.update(doc.ref, { variants: updatedVariants, inStock: true });
+            const updatedVariants = data.variants.map((v: any) => ({ ...v, stock: 10 }));
+            batch.update(doc.ref, { variants: updatedVariants, inStock: true });
           }
         });
         await batch.commit();

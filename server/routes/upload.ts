@@ -19,7 +19,8 @@ router.post("/", async (req: Request, res: Response) => {
       return res.status(500).json({ message: "GitHub CMS not configured on server." });
     }
 
-    const fullPath = filePath ? `${filePath}/${fileName}` : fileName;
+    // filePath from frontend already includes the filename
+    const fullPath = filePath || fileName;
     const url = `https://api.github.com/repos/${owner}/${repo}/contents/${fullPath}`;
 
     // Get current SHA if file exists (for updates)

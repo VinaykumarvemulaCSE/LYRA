@@ -7,31 +7,31 @@ const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
 const helmet_1 = __importDefault(require("helmet"));
 const express_rate_limit_1 = __importDefault(require("express-rate-limit"));
-const dotenv_1 = __importDefault(require("dotenv"));
-const index_js_1 = require("./routes/index.js");
-dotenv_1.default.config();
+const dotenv_1 = require("dotenv");
+const routes_1 = require("./routes");
+(0, dotenv_1.config)();
 const app = (0, express_1.default)();
 const PORT = process.env.PORT || 3001;
-// Middlewares
 app.use((0, helmet_1.default)());
 app.use((0, cors_1.default)({
-    origin: process.env.CLIENT_URL || "*", // In production, replace with your Vercel URL
-    methods: ["GET", "POST", "PUT", "DELETE"],
-    allowedHeaders: ["Content-Type", "Authorization"]
+    origin: process.env.CLIENT_URL || "*",
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true,
 }));
-app.use(express_1.default.json());
-// Rate limiting
+app.use(express_1.default.json({ limit: "10mb" }));
+app.use(express_1.default.urlencoded({ extended: true }));
 const limiter = (0, express_rate_limit_1.default)({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100 // limit each IP to 100 requests per windowMs
+    windowMs: 15 * 60 * 1000,
+    max: 100,
+    standardHeaders: true,
+    legacyHeaders: false,
 });
 app.use("/api", limiter);
-// Routes
-(0, index_js_1.registerRoutes)(app);
-// Health check
-app.get("/health", (req, res) => {
+(0, routes_1.registerRoutes)(app);
+app.get("/health", (_req, res) => {
     res.json({ status: "ok", timestamp: new Date().toISOString() });
 });
 app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
+    console.log(`[LYRA] Server running on port ${PORT}`);
 });

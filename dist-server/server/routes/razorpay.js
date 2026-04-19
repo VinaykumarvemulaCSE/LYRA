@@ -1,47 +1,14 @@
 "use strict";
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function (o) {
-            var ar = [];
-            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-            return ar;
-        };
-        return ownKeys(o);
-    };
-    return function (mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        __setModuleDefault(result, mod);
-        return result;
-    };
-})();
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const razorpay_1 = __importDefault(require("razorpay"));
-const crypto = __importStar(require("crypto"));
-const firebase_js_1 = require("../utils/firebase.js");
+const crypto_1 = __importDefault(require("crypto"));
 const firestore_1 = require("firebase-admin/firestore");
-const email_js_1 = require("../utils/email.js");
+const firebase_1 = require("../utils/firebase");
+const email_1 = require("../utils/email");
 const router = (0, express_1.Router)();
 const MAX_AMOUNT_INR = 500000;
 router.post("/order", async (req, res) => {
@@ -51,12 +18,11 @@ router.post("/order", async (req, res) => {
             return res.status(400).json({ message: "A valid positive amount is required." });
         }
         if (amount > MAX_AMOUNT_INR) {
-            return res.status(400).json({ message: `Order amount exceeds the maximum allowed value of ₹${MAX_AMOUNT_INR}.` });
+            return res.status(400).json({ message: `Order amount exceeds the maximum of ₹${MAX_AMOUNT_INR}.` });
         }
         const keyId = process.env.RAZORPAY_KEY_ID;
         const keySecret = process.env.RAZORPAY_KEY_SECRET;
         if (!keyId || !keySecret) {
-            console.error("[RazorpayOrder] Credentials missing.");
             return res.status(500).json({ message: "Payment gateway not configured." });
         }
         const instance = new razorpay_1.default({ key_id: keyId, key_secret: keySecret });
@@ -65,37 +31,39 @@ router.post("/order", async (req, res) => {
             currency: "INR",
             receipt: receipt || `lyra_${Date.now()}`,
         });
-        console.log(`[RazorpayOrder] Created: ${order.id}`);
+        console.log(`[Razorpay] Order created: ${order.id}`);
         return res.status(200).json(order);
     }
     catch (error) {
-        const err = error;
-        console.error("[RazorpayOrder] Failed:", err.message);
-        return res.status(500).json({ message: "Failed to create order.", error: err.message });
+        const msg = error instanceof Error ? error.message : "Unknown error";
+        console.error("[Razorpay] Order failed:", msg);
+        return res.status(500).json({ message: "Failed to create payment order.", error: msg });
     }
 });
 router.post("/verify", async (req, res) => {
     try {
-        const { db_order_id, razorpay_order_id, razorpay_payment_id, razorpay_signature, userEmail } = req.body;
+        const { db_order_id, razorpay_order_id, razorpay_payment_id, razorpay_signature, userEmail, } = req.body;
         if (!db_order_id || !razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
-            return res.status(400).json({ status: "failure", message: "Required fields are missing." });
+            return res.status(400).json({ status: "failure", message: "Missing required payment fields." });
         }
         const secret = process.env.RAZORPAY_KEY_SECRET?.trim();
         if (!secret) {
-            throw new Error("Razorpay secret missing.");
+            return res.status(500).json({ status: "error", message: "Payment gateway secret not configured." });
         }
-        const expectedSignature = crypto
+        // 1. Verify signature
+        const expectedSignature = crypto_1.default
             .createHmac("sha256", secret)
             .update(`${razorpay_order_id}|${razorpay_payment_id}`)
             .digest("hex");
         if (expectedSignature !== razorpay_signature) {
-            return res.status(400).json({ status: "failure", message: "Invalid signature." });
+            return res.status(400).json({ status: "failure", message: "Invalid payment signature. Possible fraud attempt." });
         }
-        const adminDb = (0, firebase_js_1.getAdminDb)();
+        // 2. Update order in Firestore
+        const adminDb = (0, firebase_1.getAdminDb)();
         const orderRef = adminDb.collection("orders").doc(db_order_id);
         const orderSnap = await orderRef.get();
         if (!orderSnap.exists) {
-            return res.status(404).json({ status: "error", message: "Order not found." });
+            return res.status(404).json({ status: "error", message: "Order not found in database." });
         }
         const orderData = orderSnap.data() || {};
         const items = orderData.items ?? [];
@@ -105,33 +73,46 @@ router.post("/verify", async (req, res) => {
             paymentId: razorpay_payment_id,
             updatedAt: firestore_1.FieldValue.serverTimestamp(),
         });
-        const batch = adminDb.batch();
-        for (const item of items) {
-            const productRef = adminDb.collection("products").doc(item.id);
-            const productSnap = await productRef.get();
-            if (productSnap.exists) {
-                const product = productSnap.data();
-                const variants = product.variants ?? [];
-                const variantIdx = variants.findIndex((v) => v.color === item.color);
-                if (variantIdx > -1) {
-                    variants[variantIdx].stock = Math.max(0, variants[variantIdx].stock - item.quantity);
-                    batch.update(productRef, { variants, updatedAt: firestore_1.FieldValue.serverTimestamp() });
+        // 3. Decrement stock
+        try {
+            const batch = adminDb.batch();
+            for (const item of items) {
+                const productRef = adminDb.collection("products").doc(item.id);
+                const productSnap = await productRef.get();
+                if (productSnap.exists) {
+                    const product = productSnap.data();
+                    const variants = product.variants ?? [];
+                    const variantIdx = variants.findIndex((v) => v.color === item.color);
+                    if (variantIdx > -1) {
+                        variants[variantIdx].stock = Math.max(0, variants[variantIdx].stock - item.quantity);
+                        batch.update(productRef, { variants, updatedAt: firestore_1.FieldValue.serverTimestamp() });
+                    }
                 }
             }
+            await batch.commit();
         }
-        await batch.commit();
+        catch (stockErr) {
+            // Non-critical — log but don't fail the response
+            console.error("[Razorpay] Stock update failed (non-critical):", stockErr instanceof Error ? stockErr.message : stockErr);
+        }
+        // 4. Send confirmation email (fire and forget)
         const recipient = userEmail || orderData.shippingAddress?.email;
         if (recipient) {
-            const shortId = db_order_id.substring(0, 8).toUpperCase();
-            (0, email_js_1.sendStoreEmail)(recipient, `Your LYRA Order Confirmed #${shortId}`, `Your payment has been successfully verified.`)
-                .catch((err) => console.error("[Email Error]:", err.message));
+            const shortId = String(db_order_id).substring(0, 8).toUpperCase();
+            const html = `
+        <h2>Order Confirmed! 🎉</h2>
+        <p>Thank you for your purchase. Your order <strong>#${shortId}</strong> has been successfully paid.</p>
+        <p>We are now processing your order and will notify you when it ships.</p>
+      `;
+            (0, email_1.sendStoreEmail)(recipient, `Your LYRA Order #${shortId} is Confirmed`, html)
+                .catch((err) => console.error("[Email] Confirmation failed:", err instanceof Error ? err.message : err));
         }
-        return res.status(200).json({ status: "success", message: "Verified." });
+        return res.status(200).json({ status: "success", message: "Payment verified and order confirmed." });
     }
     catch (error) {
-        const err = error;
-        console.error("[Verify Error]:", err.message);
-        return res.status(500).json({ status: "error", message: err.message });
+        const msg = error instanceof Error ? error.message : "Unknown error";
+        console.error("[Razorpay] Verify failed:", msg);
+        return res.status(500).json({ status: "error", message: msg });
     }
 });
 exports.default = router;

@@ -1,19 +1,20 @@
-import { Router } from "express";
+import { Router, Request, Response } from "express";
 
 const router = Router();
 
-router.get("/diagnostics", (req, res) => {
+router.get("/diagnostics", (_req: Request, res: Response) => {
   const vars = [
-    "FIREBASE_SERVICE_ACCOUNT_JSON", "FB_PROJECT_ID", "RAZORPAY_KEY_ID", 
-    "EMAIL_USER", "GITHUB_TOKEN", "ADMIN_EMAIL"
+    "FB_PROJECT_ID", "FB_CLIENT_EMAIL", "FB_PRIVATE_KEY",
+    "RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET",
+    "EMAIL_USER", "EMAIL_APP_PASSWORD",
+    "GITHUB_TOKEN", "ADMIN_EMAIL"
   ];
   const results = vars.map(v => ({ name: v, set: !!process.env[v] }));
-  res.json({ status: "ok", environment: results });
+  res.json({ status: "ok", environment: results, timestamp: new Date().toISOString() });
 });
 
-router.post("/seed", async (req, res) => {
-    // Logic for seeding Firestore could go here
-    res.json({ message: "Seed endpoint ready" });
+router.post("/seed", async (_req: Request, res: Response) => {
+  res.json({ message: "Seed endpoint ready" });
 });
 
 export default router;

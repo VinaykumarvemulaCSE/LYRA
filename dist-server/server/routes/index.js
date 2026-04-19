@@ -4,20 +4,19 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.registerRoutes = void 0;
-const razorpay_js_1 = __importDefault(require("./razorpay.js"));
-const email_js_1 = __importDefault(require("./email.js"));
-const upload_js_1 = __importDefault(require("./upload.js"));
-const admin_js_1 = __importDefault(require("./admin.js"));
+const razorpay_1 = __importDefault(require("./razorpay"));
+const email_1 = __importDefault(require("./email"));
+const upload_1 = __importDefault(require("./upload"));
+const admin_1 = __importDefault(require("./admin"));
 const registerRoutes = (app) => {
-    app.use("/api/razorpay", razorpay_js_1.default);
-    app.use("/api/email", email_js_1.default);
-    app.use("/api/upload", upload_js_1.default);
-    app.use("/api/admin", admin_js_1.default);
-    // Legacy support for single-file API paths if needed
+    app.use("/api/razorpay", razorpay_1.default);
+    app.use("/api/email", email_1.default);
+    app.use("/api/upload", upload_1.default);
+    app.use("/api/admin", admin_1.default);
+    // Legacy alias: /api/contact → /api/email/contact
     app.post("/api/contact", (req, res, next) => {
-        // Forward to email router contact path
         req.url = "/contact";
-        (0, email_js_1.default)(req, res, next);
+        (0, email_1.default)(req, res, next);
     });
 };
 exports.registerRoutes = registerRoutes;

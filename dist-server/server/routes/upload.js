@@ -4,56 +4,61 @@ const express_1 = require("express");
 const router = (0, express_1.Router)();
 router.post("/", async (req, res) => {
     try {
-        const { fileName, fileContent, path } = req.body;
+        const { fileName, fileContent, path: filePath } = req.body;
+        if (!fileName || !fileContent) {
+            return res.status(400).json({ message: "fileName and fileContent are required" });
+        }
         const githubToken = process.env.GITHUB_TOKEN;
         const owner = process.env.GITHUB_OWNER;
         const repo = process.env.GITHUB_REPO;
         const branch = process.env.GITHUB_BRANCH || "master";
         if (!githubToken || !owner || !repo) {
-            return res.status(500).json({ message: "GitHub CMS not configured" });
+            return res.status(500).json({ message: "GitHub CMS not configured on server." });
         }
-        const fullPath = path ? `${path}/${fileName}` : fileName;
+        const fullPath = filePath ? `${filePath}/${fileName}` : fileName;
         const url = `https://api.github.com/repos/${owner}/${repo}/contents/${fullPath}`;
-        // 1. Get current SHA if exists
+        // Get current SHA if file exists (for updates)
         let sha;
         try {
-            const resp = await fetch(url, {
-                headers: { Authorization: `token ${githubToken}` }
+            const existingResp = await fetch(url, {
+                headers: { Authorization: `token ${githubToken}`, "User-Agent": "LYRA-App" },
             });
-            if (resp.ok) {
-                const data = await resp.json();
-                sha = data.sha;
+            if (existingResp.ok) {
+                const existingData = await existingResp.json();
+                sha = existingData.sha;
             }
         }
-        catch (e) { }
-        // 2. Put file
+        catch {
+            // File doesn't exist yet — that's fine
+        }
+        // Upload file to GitHub
         const putResp = await fetch(url, {
             method: "PUT",
             headers: {
                 Authorization: `token ${githubToken}`,
                 "Content-Type": "application/json",
+                "User-Agent": "LYRA-App",
             },
             body: JSON.stringify({
-                message: `Upload ${fileName} via API`,
+                message: `Upload ${fileName} via LYRA Admin`,
                 content: fileContent,
                 branch,
-                sha
-            })
+                ...(sha ? { sha } : {}),
+            }),
         });
         if (putResp.ok) {
             const putData = await putResp.json();
             return res.status(200).json({
                 url: putData.content.download_url,
-                path: putData.content.path
+                path: putData.content.path,
             });
         }
-        else {
-            const errText = await putResp.text();
-            return res.status(putResp.status).json({ message: "GitHub upload failed", error: errText });
-        }
+        const errText = await putResp.text();
+        return res.status(putResp.status).json({ message: "GitHub upload failed", error: errText });
     }
     catch (error) {
-        return res.status(500).json({ message: "Internal Error", error: error.message });
+        const msg = error instanceof Error ? error.message : "Unknown error";
+        return res.status(500).json({ message: "Internal server error", error: msg });
     }
 });
 exports.default = router;

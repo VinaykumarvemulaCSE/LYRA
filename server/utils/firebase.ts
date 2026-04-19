@@ -1,30 +1,27 @@
+import admin from "firebase-admin";
 
-import { getApps, initializeApp, cert } from "firebase-admin/app";
-import { getFirestore } from "firebase-admin/firestore";
+// In production (Render), we use environment variables
+// In local dev, you'd use a serviceAccountKey.json, but for this setup 
+// we assume the environment variables are set.
 
-let adminDbCache: any = null;
+if (!admin.apps.length) {
+  try {
+    const serviceAccount = process.env.FIREBASE_ADMIN_SDK 
+      ? JSON.parse(process.env.FIREBASE_ADMIN_SDK) 
+      : null;
 
-export const getAdminDb = () => {
-  if (!adminDbCache) {
-    if (getApps().length === 0) {
-      const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
-      let serviceAccount;
-
-      if (serviceAccountJson && serviceAccountJson.trim().startsWith("{")) {
-        serviceAccount = JSON.parse(serviceAccountJson);
-      } else if (process.env.FB_PROJECT_ID && process.env.FB_CLIENT_EMAIL && process.env.FB_PRIVATE_KEY) {
-        serviceAccount = {
-          projectId: process.env.FB_PROJECT_ID,
-          clientEmail: process.env.FB_CLIENT_EMAIL,
-          privateKey: process.env.FB_PRIVATE_KEY.replace(/\\n/g, '\n'),
-        };
-      } else {
-        throw new Error("Missing Firebase credentials (FB_PROJECT_ID, FB_CLIENT_EMAIL, FB_PRIVATE_KEY) in environment.");
-      }
-
-      initializeApp({ credential: cert(serviceAccount) });
+    if (serviceAccount) {
+      admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount)
+      });
+      console.log("[LYRA] Firebase Admin Initialized");
+    } else {
+      console.warn("[LYRA] FIREBASE_ADMIN_SDK missing. Auth middleware will fail.");
     }
-    adminDbCache = getFirestore();
+  } catch (error) {
+    console.error("[LYRA] Firebase Admin Init Error:", error);
   }
-  return adminDbCache;
-};
+}
+
+export const adminDb = admin.apps.length ? admin.firestore() : null;
+export const adminAuth = admin.apps.length ? admin.auth() : null;

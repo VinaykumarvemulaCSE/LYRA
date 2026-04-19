@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Heart, ArrowLeft, Leaf, Check, Info, Star, Truck, Shield, RefreshCw, Share2, ZoomIn, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -15,9 +15,12 @@ import ProductReviews from "@/components/product/ProductReviews";
 import { Analytics } from "@/lib/analytics";
 import { Helmet } from "react-helmet-async";
 import { toast } from "sonner";
+import { doc, onSnapshot } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 export default function ProductDetail() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [product, setProduct] = useState<FirestoreProduct | null>(null);
   const [related, setRelated] = useState<FirestoreProduct[]>([]);
   const [loading, setLoading] = useState(true);
@@ -38,28 +41,32 @@ export default function ProductDetail() {
   const [currentUrl, setCurrentUrl] = useState("");
 
   useEffect(() => {
-    const fetchProduct = async () => {
-      if (!id) return;
-      try {
-        setLoading(true);
-        const data = await dataService.products.getById(id);
-        if (data) {
-          setProduct(data);
-          Analytics.productView({ product_id: data.id, price: data.price, currency: "INR" });
-          
-          // Fetch related
-          const relatedProducts = await dataService.products.getByCategory(data.category, 5);
+    if (!id) return;
+    
+    const docRef = doc(db, "products", id);
+    const unsubscribe = onSnapshot(docRef, (snap) => {
+      if (snap.exists()) {
+        const data = { id: snap.id, ...snap.data() } as FirestoreProduct;
+        setProduct(data);
+        Analytics.productView({ product_id: data.id, price: data.price, currency: "INR" });
+        
+        // Fetch related
+        dataService.products.getByCategory(data.category, 5).then(relatedProducts => {
           setRelated(relatedProducts.filter(p => p.id !== data.id).slice(0, 4));
-        }
-      } catch (err) {
-        console.error("Fetch detail error:", err);
-      } finally {
-        setLoading(false);
+        });
+      } else {
+        toast.error("Product not found");
+        navigate("/shop");
       }
-    };
-    fetchProduct();
+      setLoading(false);
+    }, (error) => {
+      console.error("Live Sync Error:", error);
+      setLoading(false);
+    });
+
     window.scrollTo(0, 0);
-  }, [id]);
+    return () => unsubscribe();
+  }, [id, navigate]);
 
   useEffect(() => {
     setCurrentUrl(window.location.href);

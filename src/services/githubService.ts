@@ -6,6 +6,7 @@
  */
 
 import { API_ROUTES } from "@/lib/api-config";
+import { getAuth } from "firebase/auth";
 
 export const githubService = {
   /**
@@ -24,11 +25,17 @@ export const githubService = {
     });
 
     try {
+      // 1.5 Get Admin ID Token
+      const auth = getAuth();
+      const user = auth.currentUser;
+      const token = user ? await user.getIdToken() : "";
+
       // 2. Call our Serverless Upload Function
       const response = await fetch(API_ROUTES.UPLOAD, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
         },
         body: JSON.stringify({
           content: base64Content,

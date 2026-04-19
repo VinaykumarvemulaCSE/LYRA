@@ -1,8 +1,9 @@
 import { Router, Request, Response } from "express";
+import { protectAdmin } from "../middleware/auth";
 
 const router = Router();
 
-router.post("/", async (req: Request, res: Response) => {
+router.post("/", protectAdmin, async (req: Request, res: Response) => {
   try {
     const { fileName, fileContent, path: filePath } = req.body;
 

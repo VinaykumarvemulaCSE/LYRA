@@ -1,8 +1,9 @@
 import { Router, Request, Response } from "express";
+import { protectAdmin } from "../middleware/auth";
 
 const router = Router();
 
-router.get("/diagnostics", (_req: Request, res: Response) => {
+router.get("/diagnostics", protectAdmin, (_req: Request, res: Response) => {
   const vars = [
     "FB_PROJECT_ID", "FB_CLIENT_EMAIL", "FB_PRIVATE_KEY",
     "RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET",

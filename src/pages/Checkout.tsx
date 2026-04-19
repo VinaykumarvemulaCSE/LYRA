@@ -45,15 +45,21 @@ export default function Checkout() {
     setIsApplyingPromo(true);
     setErrorMsg("");
     try {
-      const promos = await dataService.promotions.getAll();
-      const validPromo = promos.find(p => p.code.toLowerCase() === promoCodeInput.toLowerCase() && p.active);
+      // 2.4 Call the new Secure Promo API
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/promotions/validate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: promoCodeInput })
+      });
       
-      if (!validPromo) {
-        toast.error("Invalid Promo Code", { description: "This code does not exist or has expired." });
+      const data = await response.json();
+
+      if (!response.ok) {
+        toast.error("Invalid Promo Code", { description: data.message || "This code does not exist or has expired." });
         setAppliedPromo(null);
       } else {
-        setAppliedPromo(validPromo);
-        toast.success("Promo Applied!", { description: `You unlocked a discount.` });
+        setAppliedPromo(data);
+        toast.success("Promo Applied!", { description: `Verified: ${data.discountPercent || data.discountFlat} discount unlocked.` });
       }
     } catch (err) {
       toast.error("Failed to verify code");

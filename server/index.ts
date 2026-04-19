@@ -42,7 +42,7 @@ const distPath = path.join(process.cwd(), "dist");
 if (fs.existsSync(distPath)) {
   // Serve the exact Vite build (including Admin chunks) exclusively on Render
   app.use(express.static(distPath));
-  app.get("(.*)", (req: Request, res: Response) => {
+  app.get("*splat", (req: Request, res: Response) => {
     if (req.path.startsWith("/api")) {
       return res.status(404).json({ error: "API Route Not Found" });
     }

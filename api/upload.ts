@@ -3,8 +3,8 @@
  * ----------------------------
  * It uses the GITHUB_TOKEN from your environment variables safely.
  */
-import { verifyAdmin } from "./utils/auth";
-import { verifyCsrfToken } from "./utils/csrf";
+import { verifyAdmin } from "./utils/auth.js";
+import { verifyCsrfToken } from "./utils/csrf.js";
 
 export const config = {
   api: {

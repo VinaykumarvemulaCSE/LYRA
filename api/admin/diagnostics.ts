@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { getAdminDb } from "../utils/firebase-admin";
-import { verifyAdmin } from "../utils/auth";
-import { verifyCsrfToken } from "../utils/csrf";
+import { getAdminDb } from "../utils/firebase-admin.js";
+import { verifyAdmin } from "../utils/auth.js";
+import { verifyCsrfToken } from "../utils/csrf.js";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // 1. Auth & CSRF Check

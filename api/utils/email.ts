@@ -2,18 +2,18 @@ import * as nodemailer from "nodemailer";
 import type { Transporter } from "nodemailer";
 
 /**
- * Creates a Nodemailer transporter using server-only Gmail credentials.
- *
- * IMPORTANT: Never read VITE_ prefixed variables here — those are baked
- * into the client bundle by Vite and are visible to anyone in DevTools.
- * Only read plain server-side env vars: EMAIL_USER, EMAIL_APP_PASSWORD.
- *
- * Throws a clear error if credentials are missing instead of silently
- * falling back to Ethereal (which would swallow production emails).
+ * Standard LYRA store email service.
  */
 
-// Standard LYRA store email layout
-export const sendStoreEmail = async (to: string, subject: string, htmlContent: string): Promise<string | null> => {
+interface EmailOptions {
+  to: string;
+  subject: string;
+  template?: "welcome" | "order_confirmation" | "shipping_update";
+  data?: any;
+  html?: string;
+}
+
+export const sendStoreEmail = async (options: EmailOptions): Promise<string | null> => {
     let transporter: Transporter;
     let isEthereal = false;
 
@@ -26,7 +26,6 @@ export const sendStoreEmail = async (to: string, subject: string, htmlContent: s
             auth: { user, pass },
         });
     } else {
-        console.warn("[Email] Gmail credentials missing. Falling back to Ethereal...");
         const account = await nodemailer.createTestAccount();
         transporter = nodemailer.createTransport({
             host: account.smtp.host,
@@ -37,34 +36,63 @@ export const sendStoreEmail = async (to: string, subject: string, htmlContent: s
         isEthereal = true;
     }
 
+    // Logic to generate HTML from templates if provided
+    let finalHtml = options.html || "";
+    
+    if (options.template === "welcome") {
+      finalHtml = `
+        <h1 style="font-size: 20px; font-weight: bold;">Welcome, ${options.data?.customerName || 'Luxury Explorer'}!</h1>
+        <p>Your journey into minimal luxury starts here. Thank you for joining the LYRA community.</p>
+        <div style="margin-top: 24px;">
+          <a href="https://lyra-style-hub.vercel.app/shop" style="background-color: #000; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 4px;">Explore Collection</a>
+        </div>
+      `;
+    } else if (options.template === "order_confirmation") {
+      const itemsHtml = options.data?.items?.map((item: any) => `
+        <tr>
+          <td style="padding: 8px 0; border-bottom: 1px solid #eee;">${item.name} (${item.quantity})</td>
+          <td style="padding: 8px 0; border-bottom: 1px solid #eee; text-align: right;">₹${item.price}</td>
+        </tr>
+      `).join("");
+
+      finalHtml = `
+        <h3>Order Confirmation: #${options.data?.orderId}</h3>
+        <p>Hi ${options.data?.customerName}, we've received your order and are preparing it for shipment.</p>
+        <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
+          ${itemsHtml}
+          <tr>
+            <td style="padding: 16px 0; border-top: 2px solid #000; font-weight: bold;">TOTAL</td>
+            <td style="padding: 16px 0; border-top: 2px solid #000; text-align: right; font-weight: bold;">₹${options.data?.totalAmount}</td>
+          </tr>
+        </table>
+        <p style="margin-top: 24px; font-size: 13px; color: #666;">Shipping to: ${options.data?.shippingAddress}</p>
+      `;
+    }
+
     const layout = `
-    <div style="max-width: 600px; margin: 0 auto; font-family: Helvetica, sans-serif; color: #000; border: 1px solid #eaeaea; border-radius: 8px; overflow: hidden;">
-        <div style="background-color: #09090b; color: #fff; padding: 32px; text-align: center;">
-            <h2 style="margin: 0; font-size: 24px; letter-spacing: 4px;">LYRA</h2>
+    <div style="max-width: 600px; margin: 0 auto; font-family: sans-serif; color: #000; border: 1px solid #eaeaea; border-radius: 8px; overflow: hidden;">
+        <div style="background-color: #000; color: #fff; padding: 24px; text-align: center;">
+            <h2 style="margin: 0; font-size: 20px; letter-spacing: 4px;">LYRA</h2>
         </div>
         <div style="padding: 32px;">
-            ${htmlContent}
+            ${finalHtml}
         </div>
-        <div style="border-top: 1px solid #eaeaea; padding: 24px; text-align: center; color: #64748b; font-size: 12px;">
-            <p style="margin: 0;">© ${new Date().getFullYear()} LYRA Style Hub. All rights reserved.</p>
-            <p style="margin: 8px 0 0;">Mumbai, India</p>
+        <div style="background-color: #f9f9f9; padding: 24px; text-align: center; color: #999; font-size: 11px;">
+            <p>© ${new Date().getFullYear()} LYRA Style Hub. All rights reserved.</p>
         </div>
     </div>
     `;
 
     const info = await transporter.sendMail({
         from: '"LYRA Support" <hello@lyrastylehub.com>',
-        to,
-        subject,
+        to: options.to,
+        subject: options.subject,
         html: layout,
     });
 
-    console.log(`[Email] Sent to ${to} | ID: ${info.messageId}`);
-
     if (isEthereal) {
         const previewUrl = nodemailer.getTestMessageUrl(info);
-        console.log(`[Email] Preview URL: ${previewUrl}`);
-        return previewUrl;
+        return previewUrl ? (previewUrl as string) : null;
     }
 
     return null;

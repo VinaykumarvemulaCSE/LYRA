@@ -1,6 +1,6 @@
 import type { VercelRequest } from "@vercel/node";
 import { getAuth } from "firebase-admin/auth";
-import { getAdminDb } from "./firebase-admin";
+import { getAdminDb } from "./firebase-admin.js";
 
 /**
  * Validates a Firebase ID Token passed in the Authorization header.

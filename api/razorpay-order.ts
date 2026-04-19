@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import Razorpay from "razorpay";
-import { getAdminDb } from "./utils/firebase-admin";
-import { verifyCsrfToken } from "./utils/csrf";
+import { getAdminDb } from "./utils/firebase-admin.js";
+import { verifyCsrfToken } from "./utils/csrf.js";
 
 const MAX_AMOUNT_INR = 500000;
 

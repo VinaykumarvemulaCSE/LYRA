@@ -17,14 +17,14 @@ const getApiBaseUrl = () => {
 export const API_BASE_URL = getApiBaseUrl();
 
 export const API_ROUTES = {
-  RAZORPAY_ORDER: `${API_BASE_URL}/api/razorpay/order`,
-  RAZORPAY_VERIFY: `${API_BASE_URL}/api/razorpay/verify`,
+  RAZORPAY_ORDER: `${API_BASE_URL}/api/razorpay-order`,
+  RAZORPAY_VERIFY: `${API_BASE_URL}/api/razorpay-verify`,
   UPLOAD: `${API_BASE_URL}/api/upload`,
-  CONTACT: `${API_BASE_URL}/api/email/contact`,
-  WELCOME_EMAIL: `${API_BASE_URL}/api/email/welcome`,
-  SHIPPING_EMAIL: `${API_BASE_URL}/api/email/shipping`,
-  DIAGNOSTICS: `${API_BASE_URL}/api/admin/diagnostics`,
-  MAINTENANCE: `${API_BASE_URL}/api/admin/maintenance`,
+  CONTACT: `${API_BASE_URL}/api/email?type=contact`,
+  WELCOME_EMAIL: `${API_BASE_URL}/api/email?type=welcome`,
+  SHIPPING_EMAIL: `${API_BASE_URL}/api/email?type=shipping`,
+  DIAGNOSTICS: `${API_BASE_URL}/api/admin?action=diagnostics`,
+  MAINTENANCE: `${API_BASE_URL}/api/admin`,
   CSRF: `${API_BASE_URL}/api/csrf-token`,
 };
 

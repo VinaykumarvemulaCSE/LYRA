@@ -2,7 +2,7 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import * as crypto from "crypto";
 import { getApps, initializeApp, cert } from "firebase-admin/app";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
-import { sendStoreEmail } from "./utils/email";
+import { sendStoreEmail } from "./utils/email.js";
 
 let adminDbCache: any = null;
 
@@ -147,7 +147,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           </div>
         `;
 
-        previewUrl = await sendStoreEmail(recipient, `Your LYRA Order Confirmed #${shortOrderId}`, userHtml);
+        previewUrl = await sendStoreEmail({
+          to: recipient,
+          subject: `Your LYRA Order Confirmed #${shortOrderId}`,
+          html: userHtml
+        });
 
         // 5. Notify Admin of Sale
         if (adminEmail) {
@@ -166,7 +170,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               <a href="https://lyrastylehub.com/admin" style="display: inline-block; background-color: #000; color: #fff; text-decoration: none; padding: 12px 24px; font-weight: bold; text-transform: uppercase; font-size: 12px; letter-spacing: 1px;">Open Admin Panel</a>
             </div>
           `;
-          await sendStoreEmail(adminEmail, `[New Sale] Order #${shortOrderId} - ₹${orderData.totalAmount?.toLocaleString("en-IN")}`, adminHtml);
+          await sendStoreEmail({
+            to: adminEmail,
+            subject: `[New Sale] Order #${shortOrderId} - ₹${orderData.totalAmount?.toLocaleString("en-IN")}`,
+            html: adminHtml
+          });
         }
 
       } catch (err) {

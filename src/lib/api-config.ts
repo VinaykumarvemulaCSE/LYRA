@@ -7,11 +7,9 @@
  */
 
 const getApiBaseUrl = () => {
-  const url = import.meta.env.VITE_API_BASE_URL;
-  if (!url) return ""; // Fallback for Vercel/Same-domain
-  
-  // Ensure no trailing slash for consistency
-  return url.endsWith("/") ? url.slice(0, -1) : url;
+  // Hardcoded to empty string to use Vercel Serverless Functions directly
+  // This bypasses the slower Render backend and avoids CORS issues completely.
+  return ""; 
 };
 
 export const API_BASE_URL = getApiBaseUrl();

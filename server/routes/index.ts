@@ -1,8 +1,8 @@
 import { Express } from "express";
-import razorpayRouter from "./razorpay";
-import emailRouter from "./email";
-import uploadRouter from "./upload";
-import adminRouter from "./admin";
+import razorpayRouter from "./razorpay.js";
+import emailRouter from "./email.js";
+import uploadRouter from "./upload.js";
+import adminRouter from "./admin.js";
 
 export const registerRoutes = (app: Express) => {
   app.use("/api/razorpay", razorpayRouter);

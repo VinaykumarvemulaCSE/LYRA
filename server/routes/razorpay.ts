@@ -1,9 +1,9 @@
 import { Router } from "express";
 import Razorpay from "razorpay";
 import * as crypto from "crypto";
-import { getAdminDb } from "../utils/firebase";
+import { getAdminDb } from "../utils/firebase.js";
 import { FieldValue } from "firebase-admin/firestore";
-import { sendStoreEmail } from "../utils/email";
+import { sendStoreEmail } from "../utils/email.js";
 
 const router = Router();
 const MAX_AMOUNT_INR = 500000;
@@ -38,9 +38,10 @@ router.post("/order", async (req, res) => {
     console.log(`[RazorpayOrder] Created: ${order.id}`);
     return res.status(200).json(order);
 
-  } catch (error: any) {
-    console.error("[RazorpayOrder] Failed:", error.message);
-    return res.status(500).json({ message: "Failed to create order.", error: error.message });
+  } catch (error: unknown) {
+    const err = error as Error;
+    console.error("[RazorpayOrder] Failed:", err.message);
+    return res.status(500).json({ message: "Failed to create order.", error: err.message });
   }
 });
 
@@ -91,7 +92,7 @@ router.post("/verify", async (req, res) => {
       if (productSnap.exists) {
         const product = productSnap.data()!;
         const variants = product.variants ?? [];
-        const variantIdx = variants.findIndex((v: any) => v.color === item.color);
+        const variantIdx = variants.findIndex((v: { color: string; stock: number }) => v.color === item.color);
         if (variantIdx > -1) {
           variants[variantIdx].stock = Math.max(0, variants[variantIdx].stock - item.quantity);
           batch.update(productRef, { variants, updatedAt: FieldValue.serverTimestamp() });
@@ -104,14 +105,15 @@ router.post("/verify", async (req, res) => {
     if (recipient) {
       const shortId = db_order_id.substring(0, 8).toUpperCase();
       sendStoreEmail(recipient, `Your LYRA Order Confirmed #${shortId}`, `Your payment has been successfully verified.`)
-        .catch(err => console.error("[Email Error]:", err.message));
+        .catch((err: Error) => console.error("[Email Error]:", err.message));
     }
 
     return res.status(200).json({ status: "success", message: "Verified." });
 
   } catch (error: any) {
-    console.error("[Verify Error]:", error.message);
-    return res.status(500).json({ status: "error", message: error.message });
+    const err = error as Error;
+    console.error("[Verify Error]:", err.message);
+    return res.status(500).json({ status: "error", message: err.message });
   }
 });
 

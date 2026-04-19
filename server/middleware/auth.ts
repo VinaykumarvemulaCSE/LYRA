@@ -17,16 +17,17 @@ export const protectAdmin = async (req: Request, res: Response, next: NextFuncti
     const decodedToken = await adminAuth.verifyIdToken(token);
     const uid = decodedToken.uid;
 
-    // 2. Check Role in Firestore
-    if (!adminDb) {
-      return res.status(500).json({ message: "Database system offline" });
-    }
-
+    // 2. Check Role in Firestore OR check against ADMIN_EMAIL env var
     const userDoc = await adminDb.collection("users").doc(uid).get();
     const userData = userDoc.data();
+    const userEmail = decodedToken.email?.toLowerCase();
+    const adminEmail = process.env.ADMIN_EMAIL?.toLowerCase();
 
-    if (!userDoc.exists || userData?.role !== "admin") {
-      console.warn(`[SECURITY] Unauthorized admin attempt by UID: ${uid}`);
+    const isRoleAdmin = userData?.role === "admin";
+    const isEmailAdmin = adminEmail && userEmail === adminEmail;
+
+    if (!isRoleAdmin && !isEmailAdmin) {
+      console.warn(`[SECURITY] Unauthorized admin attempt by Email: ${userEmail}`);
       return res.status(403).json({ message: "Access denied: Admins only" });
     }
 

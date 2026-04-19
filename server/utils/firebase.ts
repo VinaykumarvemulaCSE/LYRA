@@ -25,3 +25,14 @@ if (!admin.apps.length) {
 
 export const adminDb = admin.apps.length ? admin.firestore() : null;
 export const adminAuth = admin.apps.length ? admin.auth() : null;
+
+// Aliases for compatibility with existing routes
+export const getAdminDb = () => {
+  if (!adminDb) throw new Error("Firebase Admin DB not initialized. Check FIREBASE_ADMIN_SDK env var.");
+  return adminDb;
+};
+
+export const getAdminAuth = () => {
+  if (!adminAuth) throw new Error("Firebase Admin Auth not initialized. Check FIREBASE_ADMIN_SDK env var.");
+  return adminAuth;
+};

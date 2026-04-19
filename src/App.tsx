@@ -70,7 +70,9 @@ const App = () => (
                     <Route path="/search" element={<SearchResults />} />
                     <Route path="/auth" element={<Auth />} />
                     <Route path="/account" element={<Account />} />
-                    <Route path="/admin" element={<Admin />} />
+                    {import.meta.env.VITE_ENABLE_ADMIN === 'true' && (
+                      <Route path="/admin" element={<Admin />} />
+                    )}
                     <Route path="/reset-password" element={<ResetPassword />} />
                     <Route path="/emails" element={<EmailPreviews />} />
                     <Route path="/sustainability" element={<Sustainability />} />

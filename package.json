@@ -12,7 +12,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "dev:api": "tsx server/index.ts",
-    "build:server": "echo Build complete - tsx runs TS directly",
+    "build:admin": "npx cross-env VITE_ENABLE_ADMIN=true vite build",
+    "build:server": "npm run build:admin && echo Build complete - tsx runs TS directly",
     "start:server": "node --import tsx/esm server/index.ts"
   },
   "dependencies": {

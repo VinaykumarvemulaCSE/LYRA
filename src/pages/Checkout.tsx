@@ -47,8 +47,8 @@ export default function Checkout() {
     setIsApplyingPromo(true);
     setErrorMsg("");
     try {
-      // 2.4 Call the new Secure Promo API
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/promotions/validate`, {
+      // 2.4 Call the new Secure Promo API via Vercel Route
+      const response = await fetch(API_ROUTES.PROMOTIONS, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ code: promoCodeInput })

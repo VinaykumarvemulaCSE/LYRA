@@ -21,6 +21,7 @@ export const API_ROUTES = {
   CONTACT: `${API_BASE_URL}/api/email?type=contact`,
   WELCOME_EMAIL: `${API_BASE_URL}/api/email?type=welcome`,
   SHIPPING_EMAIL: `${API_BASE_URL}/api/email?type=shipping`,
+  PROMOTIONS: `${API_BASE_URL}/api/promotions`,
   DIAGNOSTICS: `${API_BASE_URL}/api/admin?action=diagnostics`,
   MAINTENANCE: `${API_BASE_URL}/api/admin`,
   CSRF: `${API_BASE_URL}/api/csrf-token`,

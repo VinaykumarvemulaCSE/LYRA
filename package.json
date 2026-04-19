@@ -12,7 +12,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "dev:api": "tsx server/index.ts",
-    "build:admin": "npx cross-env VITE_ENABLE_ADMIN=true vite build",
+    "build:admin": "cross-env VITE_ENABLE_ADMIN=true vite build",
     "build:server": "npm run build:admin && echo Build complete - tsx runs TS directly",
     "start:server": "node --import tsx/esm server/index.ts"
   },
@@ -77,7 +77,8 @@
     "vaul": "^0.9.9",
     "zod": "^3.25.76",
     "tsx": "^4.21.0",
-    "dotenv": "^17.4.2"
+    "dotenv": "^17.4.2",
+    "cross-env": "^7.0.3"
   },
   "devDependencies": {
     "@eslint/js": "^9.32.0",

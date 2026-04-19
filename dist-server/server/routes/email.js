@@ -1,6 +1,8 @@
-import { Router } from "express";
-import { sendStoreEmail } from "../utils/email.js";
-const router = Router();
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const email_js_1 = require("../utils/email.js");
+const router = (0, express_1.Router)();
 router.post("/contact", async (req, res) => {
     try {
         const { firstName, lastName, email, subject, message } = req.body;
@@ -20,7 +22,7 @@ router.post("/contact", async (req, res) => {
         const adminEmail = process.env.ADMIN_EMAIL;
         if (!adminEmail)
             return res.status(500).json({ message: "Admin email not set" });
-        await sendStoreEmail(adminEmail, `[Contact Form] ${subject || "No Subject"}`, htmlContent);
+        await (0, email_js_1.sendStoreEmail)(adminEmail, `[Contact Form] ${subject || "No Subject"}`, htmlContent);
         return res.status(200).json({ status: "success" });
     }
     catch (error) {
@@ -36,7 +38,7 @@ router.post("/welcome", async (req, res) => {
             <h1>Welcome to LYRA, ${userName || "there"}!</h1>
             <p>We're thrilled to have you here. Discover our latest collections.</p>
         `;
-        await sendStoreEmail(email, "Welcome to LYRA Style Hub", html);
+        await (0, email_js_1.sendStoreEmail)(email, "Welcome to LYRA Style Hub", html);
         return res.status(200).json({ status: "success" });
     }
     catch (err) {
@@ -52,7 +54,7 @@ router.post("/shipping", async (req, res) => {
             <h2>Your Order #${orderId.substring(0, 8).toUpperCase()} has Shipped!</h2>
             <p>Tracking Number: ${trackingNum || "Awaiting Update"}</p>
         `;
-        await sendStoreEmail(email, "Your LYRA Order is on its way", html);
+        await (0, email_js_1.sendStoreEmail)(email, "Your LYRA Order is on its way", html);
         return res.status(200).json({ status: "success" });
     }
     catch (err) {
@@ -62,11 +64,11 @@ router.post("/shipping", async (req, res) => {
 router.post("/test", async (req, res) => {
     try {
         const { email } = req.body;
-        await sendStoreEmail(email || process.env.ADMIN_EMAIL, "LYRA System Test", "This is a test email from the Render backend.");
+        await (0, email_js_1.sendStoreEmail)(email || process.env.ADMIN_EMAIL, "LYRA System Test", "This is a test email from the Render backend.");
         return res.status(200).json({ message: "Sent" });
     }
     catch (err) {
         return res.status(500).json({ error: err.message });
     }
 });
-export default router;
+exports.default = router;

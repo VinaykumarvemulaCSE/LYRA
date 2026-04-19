@@ -1,5 +1,7 @@
-import { Router } from "express";
-const router = Router();
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const router = (0, express_1.Router)();
 router.post("/", async (req, res) => {
     try {
         const { fileName, fileContent, path } = req.body;
@@ -54,4 +56,4 @@ router.post("/", async (req, res) => {
         return res.status(500).json({ message: "Internal Error", error: error.message });
     }
 });
-export default router;
+exports.default = router;

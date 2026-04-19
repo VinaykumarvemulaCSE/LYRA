@@ -1,5 +1,7 @@
-import { Router } from "express";
-const router = Router();
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const router = (0, express_1.Router)();
 router.get("/diagnostics", (req, res) => {
     const vars = [
         "FIREBASE_SERVICE_ACCOUNT_JSON", "FB_PROJECT_ID", "RAZORPAY_KEY_ID",
@@ -12,4 +14,4 @@ router.post("/seed", async (req, res) => {
     // Logic for seeding Firestore could go here
     res.json({ message: "Seed endpoint ready" });
 });
-export default router;
+exports.default = router;

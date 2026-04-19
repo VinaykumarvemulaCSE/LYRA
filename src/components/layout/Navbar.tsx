@@ -165,9 +165,11 @@ export default function Navbar() {
                     <Link to="/account" className="flex items-center gap-2 w-full p-2 rounded-xl text-xs font-medium hover:bg-white/10 transition-colors">
                       <UserIcon className="w-3.5 h-3.5" /> Profile Settings
                     </Link>
-                    <Link to="/admin" className="flex items-center gap-2 w-full p-2 rounded-xl text-xs font-medium hover:bg-white/10 transition-colors">
-                      <Shield className="w-3.5 h-3.5" /> Admin Panel
-                    </Link>
+                    {(user?.email === (import.meta.env.VITE_ADMIN_EMAIL || "kumarvinay072007@gmail.com")) && (
+                      <Link to="/admin" className="flex items-center gap-2 w-full p-2 rounded-xl text-xs font-medium hover:bg-white/10 transition-colors border-t border-white/5 mt-1 pt-2">
+                        <Shield className="w-3.5 h-3.5 text-primary" /> Admin Panel
+                      </Link>
+                    )}
                     <button 
                       onClick={() => { signOut(); setMenuOpen(false); }} 
                       className="flex items-center gap-2 w-full p-2 rounded-xl text-xs font-medium text-destructive hover:bg-destructive/10 transition-colors mt-1"
@@ -179,7 +181,7 @@ export default function Navbar() {
               </AnimatePresence>
             </div>
 
-            <Link to="/wishlist" className="p-2.5 rounded-xl glass-subtle text-foreground hover:text-primary transition-all hover:scale-105" aria-label="Wishlist">
+            <Link to="/wishlist" className="p-2.5 rounded-xl glass-subtle text-foreground hover:text-primary transition-all hover:scale-105 hidden sm:flex" aria-label="Wishlist">
               <Heart className="w-[18px] h-[18px]" />
             </Link>
             <button
@@ -309,6 +311,12 @@ export default function Navbar() {
                 ))}
               </div>
               <div className="border-t border-border/50 pt-6 space-y-4 mt-auto mb-12">
+                <Link to="/wishlist" className="flex items-center gap-3 font-bold" onClick={() => setMobileOpen(false)}>
+                  <div className="w-10 h-10 rounded-xl glass-subtle flex items-center justify-center text-foreground">
+                    <Heart className="w-5 h-5" />
+                  </div>
+                  <span className="text-sm">My Wishlist</span>
+                </Link>
                 <Link to={user ? "/account" : "/auth"} className="flex items-center gap-3 font-bold" onClick={() => setMobileOpen(false)}>
                   <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center text-primary-foreground overflow-hidden">
                     {user?.photoURL ? (

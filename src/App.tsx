@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
@@ -70,9 +70,7 @@ const App = () => (
                     <Route path="/search" element={<SearchResults />} />
                     <Route path="/auth" element={<Auth />} />
                     <Route path="/account" element={<Account />} />
-                    {import.meta.env.VITE_ENABLE_ADMIN === 'true' && (
-                      <Route path="/admin" element={<Admin />} />
-                    )}
+                    <Route path="/admin" element={<Admin />} />
                     <Route path="/reset-password" element={<ResetPassword />} />
                     <Route path="/emails" element={<EmailPreviews />} />
                     <Route path="/sustainability" element={<Sustainability />} />

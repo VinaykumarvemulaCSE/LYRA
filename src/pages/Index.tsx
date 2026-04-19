@@ -118,9 +118,9 @@ export default function Index() {
                         <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse shadow-[0_0_8px_rgba(var(--primary),0.8)]" />
                         {slide.subtitle}
                       </span>
-                      <h1 className="font-heading text-5xl md:text-7xl lg:text-8xl font-black text-white leading-[1.1] mb-8 tracking-tighter drop-shadow-2xl">
+                      <h1 className="font-heading text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-black text-white leading-[1.1] mb-6 sm:mb-8 tracking-tighter drop-shadow-2xl overflow-hidden">
                         {slide.title.split(" ").map((word, wordIdx) => (
-                          <span key={wordIdx} className="inline-block whitespace-nowrap mr-[0.2em] last:mr-0">
+                          <span key={wordIdx} className="inline-block sm:whitespace-nowrap mr-[0.2em] last:mr-0">
                             {word.split("").map((letter, letterIdx) => (
                               <motion.span
                                 key={letterIdx}

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowLeft, ShieldCheck, Loader2 } from "lucide-react";
+import { ArrowLeft, ShieldCheck, Loader2, ShoppingBag } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useCart } from "@/context/CartContext";
 import { useAuth } from "@/context/AuthContext";
 import { formatPrice } from "@/data/products";
@@ -204,18 +205,23 @@ export default function Checkout() {
 
   if (items.length === 0) {
     return (
-      <main className="pt-24 pb-16 min-h-screen container max-w-4xl text-center">
-        <h1 className="font-heading text-3xl font-bold mb-4">Checkout</h1>
-        <p className="text-muted-foreground mb-8">Your bag is empty.</p>
-        <Button asChild className="gradient-primary border-0 rounded-xl px-12 h-12">
-          <Link to="/shop">Return to Shop</Link>
+      <main className="pt-32 pb-16 min-h-screen container max-w-4xl text-center">
+        <div className="w-24 h-24 bg-secondary rounded-full flex items-center justify-center mx-auto mb-6">
+          <ShoppingBag className="w-10 h-10 text-muted-foreground" />
+        </div>
+        <h1 className="font-heading text-3xl font-bold mb-4">Your Bag is Empty</h1>
+        <p className="text-muted-foreground mb-8">Add some exquisite pieces to your bag before checking out.</p>
+        <Button asChild className="gradient-primary border-0 rounded-xl px-12 h-14 font-bold text-lg">
+          <Link to="/shop">Explore Collection</Link>
         </Button>
       </main>
     );
   }
 
+  const [showSummaryOnMobile, setShowSummaryOnMobile] = useState(false);
+
   return (
-    <main className="pt-24 pb-16 min-h-screen bg-background/50">
+    <main className="pt-24 pb-28 md:pb-16 min-h-screen bg-background/50">
       <div className="container max-w-6xl">
         <div className="flex items-center gap-4 mb-10">
           <Link to="/cart" className="w-12 h-12 flex items-center justify-center rounded-2xl glass hover:bg-secondary transition-all hover:scale-105 active:scale-95">
@@ -225,6 +231,53 @@ export default function Checkout() {
             <span className="text-[10px] font-black text-primary uppercase tracking-[0.3em]">Secure Checkout</span>
             <h1 className="font-heading text-4xl font-black tracking-tighter">Your Details</h1>
           </div>
+        </div>
+
+        {/* Mobile Summary Toggle */}
+        <div className="lg:hidden mb-6">
+          <button 
+            onClick={() => setShowSummaryOnMobile(!showSummaryOnMobile)}
+            className="w-full h-14 px-5 glass rounded-2xl flex items-center justify-between font-bold text-sm shadow-sm"
+          >
+            <span className="flex items-center gap-2">
+              <ShoppingBag className="w-4 h-4 text-primary" />
+              {showSummaryOnMobile ? "Hide Summary" : "View Summary"}
+            </span>
+            <span>{formatPrice(grandTotal)}</span>
+          </button>
+          
+          <AnimatePresence>
+            {showSummaryOnMobile && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                className="overflow-hidden mt-2"
+              >
+                <div className="glass-strong rounded-2xl p-6 border border-border/10">
+                   <div className="space-y-4 mb-4 pr-2">
+                      {items.map((item) => (
+                        <div key={item.id} className="flex gap-4 items-center">
+                          <div className="w-12 h-16 rounded-lg overflow-hidden flex-shrink-0 relative">
+                            <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-bold text-xs truncate">{item.name}</h4>
+                            <p className="text-[10px] text-muted-foreground">{item.color} • {item.size}</p>
+                            <p className="text-xs font-black">{formatPrice(item.price)}</p>
+                          </div>
+                        </div>
+                      ))}
+                   </div>
+                   <div className="border-t border-border/30 pt-4 space-y-2 text-xs">
+                      <div className="flex justify-between font-medium"><span>Subtotal</span><span>{formatPrice(total)}</span></div>
+                      <div className="flex justify-between font-medium"><span>Shipping</span><span>{shipping === 0 ? "Free" : formatPrice(shipping)}</span></div>
+                      {discountAmount > 0 && <div className="flex justify-between text-green-500 font-bold"><span>Discount</span><span>-{formatPrice(discountAmount)}</span></div>}
+                   </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         <div className="grid lg:grid-cols-5 gap-10">
@@ -253,7 +306,7 @@ export default function Checkout() {
               <div className="flex items-center justify-between mb-6">
                 <h2 className="font-heading font-black text-xl tracking-tight">Shipping Address</h2>
                 <div className="px-3 py-1 bg-primary/10 rounded-lg border border-primary/20">
-                  <span className="text-[9px] font-black text-primary uppercase tracking-widest">Saved Address Used</span>
+                  <span className="text-[9px] font-black text-primary uppercase tracking-widest">Courier Delivery</span>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-5">
@@ -296,7 +349,7 @@ export default function Checkout() {
                 </div>
                 <div>
                   <h3 className="font-heading font-black text-lg">Secure Gateway</h3>
-                  <p className="text-xs text-muted-foreground">Encrypted payments via Razorpay</p>
+                  <p className="text-xs text-muted-foreground">Via Razorpay</p>
                 </div>
               </div>
               <img src="https://upload.wikimedia.org/wikipedia/commons/8/89/Razorpay_logo.svg" alt="Razorpay" className="h-4 opacity-50 contrast-125" />
@@ -308,40 +361,45 @@ export default function Checkout() {
               </div>
             )}
 
-            <Button type="submit" className="w-full h-16 text-xl font-black gradient-primary border-0 rounded-[20px] shadow-2xl hover:scale-[1.02] active:scale-[0.98] transition-all" disabled={isProcessing}>
-              {isProcessing ? (
-                <span className="flex items-center gap-3">
-                  <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  Generating Gateway...
-                </span>
-              ) : (
-                `Complete Purchase — ${formatPrice(grandTotal)}`
-              )}
-            </Button>
-            <p className="text-center text-[10px] font-bold text-muted-foreground uppercase tracking-widest opacity-60">
+            {/* Desktop Only Button */}
+            <div className="hidden lg:block pt-4">
+              <Button type="submit" className="w-full h-16 text-xl font-black gradient-primary border-0 rounded-[20px] shadow-2xl hover:scale-[1.02] active:scale-[0.98] transition-all" disabled={isProcessing}>
+                {isProcessing ? (
+                  <span className="flex items-center gap-3">
+                    <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Generating...
+                  </span>
+                ) : (
+                  `Complete — ${formatPrice(grandTotal)}`
+                )}
+              </Button>
+            </div>
+            
+            <p className="hidden md:block text-center text-[10px] font-bold text-muted-foreground uppercase tracking-widest opacity-60">
               Safe & Secure · 256-bit SSL Encryption
             </p>
           </form>
 
-          {/* Summary */}
-          <div className="lg:col-span-2">
+          {/* Desktop Summary Sidebar */}
+          <div className="hidden lg:block lg:col-span-2">
             <div className="glass-strong rounded-2xl p-6 sticky top-28">
               <h2 className="font-heading font-bold text-lg mb-6">Order Summary</h2>
               <div className="space-y-4 mb-6 max-h-[40vh] overflow-y-auto pr-2">
                 {items.map((item) => (
-                  <div key={item.id} className="flex gap-3">
-                    <div className="w-16 h-20 rounded-xl overflow-hidden flex-shrink-0 relative">
+                  <div key={item.id} className="flex gap-4 items-center border-b border-border/5 last:border-0 pb-4 last:pb-0">
+                    <div className="w-16 h-20 rounded-xl overflow-hidden flex-shrink-0 relative border border-border/10">
                       <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
-                      <span className="absolute -top-1 -right-1 w-5 h-5 gradient-primary text-primary-foreground text-[10px] font-bold rounded-full flex items-center justify-center">{item.quantity}</span>
+                      <span className="absolute -top-1.5 -right-1.5 w-6 h-6 gradient-primary text-primary-foreground text-[10px] font-black rounded-full flex items-center justify-center shadow-lg border-2 border-background">{item.quantity}</span>
                     </div>
-                    <div>
-                      <h4 className="font-bold text-sm line-clamp-1">{item.name}</h4>
-                      <p className="text-xs text-muted-foreground">{item.color} / {item.size}</p>
-                      <p className="text-sm font-medium mt-1">{formatPrice(item.price)}</p>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-bold text-sm leading-tight mb-0.5 truncate">{item.name}</h4>
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5">{item.color} • {item.size}</p>
+                      <p className="text-sm font-black text-primary">{formatPrice(item.price)}</p>
                     </div>
                   </div>
                 ))}
               </div>
+              
               <div className="border-t border-border/30 pt-4 space-y-3 text-sm">
                 <div className="flex justify-between"><span className="text-muted-foreground">Subtotal</span><span className="font-medium">{formatPrice(total)}</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">Shipping</span><span className="font-medium">{shipping === 0 ? "Free" : formatPrice(shipping)}</span></div>
@@ -372,6 +430,33 @@ export default function Checkout() {
               </div>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Mobile Sticky Payment Bar */}
+      <div className="lg:hidden fixed bottom-6 left-4 right-4 z-50">
+        <div className="glass-strong rounded-[24px] p-4 shadow-2xl border border-white/10 backdrop-blur-2xl">
+          <div className="flex items-center justify-between mb-4 px-2">
+            <div>
+              <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Grand Total</p>
+              <p className="text-xl font-heading font-black">{formatPrice(grandTotal)}</p>
+            </div>
+            <div className="text-right">
+               <p className="text-[10px] font-bold text-primary animate-pulse uppercase tracking-tighter">Secure Payment</p>
+               <img src="https://upload.wikimedia.org/wikipedia/commons/8/89/Razorpay_logo.svg" alt="Razorpay" className="h-3 ml-auto opacity-70" />
+            </div>
+          </div>
+          <Button 
+            onClick={(e) => handleSubmit(e as any)} 
+            disabled={isProcessing}
+            className="w-full h-14 text-base font-black gradient-primary border-0 rounded-2xl shadow-xl active:scale-95 transition-all"
+          >
+            {isProcessing ? (
+              <span className="flex items-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin" /> Preparing... 
+              </span>
+            ) : "Complete Purchase"}
+          </Button>
         </div>
       </div>
     </main>

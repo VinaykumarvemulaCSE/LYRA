@@ -140,32 +140,35 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
         </AnimatePresence>
       </div>
 
-      <div className="mt-4 space-y-1.5 px-1">
-        <div className="flex justify-between items-start gap-2">
-          <Link to={`/product/${product.id}`} className="flex-1">
-            <h3 className="font-heading text-sm font-bold text-foreground hover:text-primary transition-colors truncate">
+      <div className="mt-3 md:mt-4 space-y-1 md:space-y-1.5 px-0.5 md:px-1">
+        <div className="flex flex-col sm:flex-row justify-between items-start gap-1 sm:gap-2">
+          <Link to={`/product/${product.id}`} className="flex-1 min-w-0 w-full">
+            <h3 className="font-heading text-[13px] md:text-sm font-bold text-foreground hover:text-primary transition-colors truncate">
               {product.name}
             </h3>
-            <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-tighter">{product.brand}</p>
+            <p className="text-[9px] md:text-[10px] font-bold uppercase text-muted-foreground tracking-tighter truncate">{product.brand}</p>
           </Link>
-          <div className="text-right">
-            <p className="text-sm font-black text-primary">{formatPrice(product.price)}</p>
+          <div className="text-left sm:text-right flex-shrink-0">
+            <p className="text-[13px] md:text-sm font-black text-primary">{formatPrice(product.price)}</p>
             {product.originalPrice && (
-              <p className="text-[10px] text-muted-foreground line-through">{formatPrice(product.originalPrice)}</p>
+              <p className="text-[9px] md:text-[10px] text-muted-foreground line-through opacity-70">{formatPrice(product.originalPrice)}</p>
             )}
           </div>
         </div>
 
         {/* Color swatches */}
-        <div className="flex gap-2 pt-1">
-          {product.variants?.map((v) => (
+        <div className="flex flex-wrap gap-1.5 pt-1">
+          {product.variants?.slice(0, 4).map((v) => (
             <span
               key={v.color}
-              className="w-4 h-4 rounded-full border border-white/10 shadow-sm ring-1 ring-border group-hover:ring-primary/30 transition-all"
+              className="w-3.5 h-3.5 md:w-4 md:h-4 rounded-full border border-white/10 shadow-sm ring-1 ring-border group-hover:ring-primary/30 transition-all flex-shrink-0"
               style={{ backgroundColor: v.colorHex }}
               title={v.color}
             />
           ))}
+          {product.variants && product.variants.length > 4 && (
+            <span className="text-[8px] font-bold text-muted-foreground flex items-center">+{product.variants.length - 4}</span>
+          )}
         </div>
       </div>
     </motion.div>

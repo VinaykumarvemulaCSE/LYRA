@@ -78,7 +78,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
 
   } catch (err: any) {
-    console.error("[PROMO ERROR]", err);
-    res.status(500).json({ message: "Error validating promo code", error: err.message });
+    return res.status(500).json({ message: "Error validating promo code", error: err.message });
   }
 }

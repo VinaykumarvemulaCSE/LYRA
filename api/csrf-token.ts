@@ -10,5 +10,5 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
   const token = setCsrfToken(res);
 
   // Return the token to the client so it can attach it as a header on subsequent requests
-  res.status(200).json({ token });
+  return res.status(200).json({ token });
 }

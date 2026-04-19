@@ -956,22 +956,24 @@ export default function Admin() {
                           { name: "FIREBASE_INDIVIDUAL", status: diagResults.env?.FIREBASE_INDIVIDUAL?.status || 'missing', detail: diagResults.env?.FIREBASE_INDIVIDUAL?.detail, advice: diagResults.env?.FIREBASE_INDIVIDUAL?.advice },
                           { name: "RAZORPAY_KEYS", status: diagResults.env?.RAZORPAY_KEY?.status || 'missing', detail: diagResults.env?.RAZORPAY_KEY?.detail, advice: diagResults.env?.RAZORPAY_KEY?.advice },
                           { name: "EMAIL_SMTP", status: diagResults.env?.EMAIL_SMTP?.status || 'missing', detail: diagResults.env?.EMAIL_SMTP?.detail, advice: diagResults.env?.EMAIL_SMTP?.advice }
-                        ].map(v => (
-                          <div key={v.name} className={`p-4 rounded-xl border-l-4 ${v.status === 'valid_format' || v.status === 'present' ? 'bg-emerald-500/5 border-emerald-500' : 'bg-destructive/5 border-destructive'}`}>
+                        ].map(v => {
+                          const isGood = v.status === 'valid_format' || v.status === 'present' || v.status === 'healthy';
+                          return (
+                          <div key={v.name} className={`p-4 rounded-xl border-l-4 ${isGood ? 'bg-emerald-500/5 border-emerald-500' : 'bg-destructive/5 border-destructive'}`}>
                             <div className="flex justify-between items-start mb-1">
                               <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{v.name}</span>
-                              {v.status === 'valid_format' || v.status === 'present' ? <Check className="w-4 h-4 text-emerald-500" /> : <AlertCircle className="w-4 h-4 text-destructive" />}
+                              {isGood ? <Check className="w-4 h-4 text-emerald-500" /> : <AlertCircle className="w-4 h-4 text-destructive" />}
                             </div>
                             <p className="text-sm font-bold capitalize">{v.status.replace(/_/g, ' ')}</p>
                             {v.detail && <p className="text-xs text-muted-foreground mt-1 font-mono break-all">{v.detail}</p>}
-                            {v.advice && (
+                            {v.advice && !isGood && (
                               <div className="mt-3 p-3 bg-destructive/10 rounded-lg border border-destructive/20">
                                 <p className="text-[10px] font-bold text-destructive uppercase mb-1">Recommended Fix:</p>
                                 <p className="text-xs text-destructive/80 leading-relaxed font-medium">{v.advice}</p>
                               </div>
                             )}
                           </div>
-                        ))}
+                        )})}
                       </div>
                     </div>
                   </div>

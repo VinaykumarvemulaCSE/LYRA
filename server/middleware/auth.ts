@@ -18,6 +18,10 @@ export const protectAdmin = async (req: Request, res: Response, next: NextFuncti
     const uid = decodedToken.uid;
 
     // 2. Check Role in Firestore OR check against ADMIN_EMAIL env var
+    if (!adminDb) {
+      return res.status(500).json({ message: "Database system offline" });
+    }
+    
     const userDoc = await adminDb.collection("users").doc(uid).get();
     const userData = userDoc.data();
     const userEmail = decodedToken.email?.toLowerCase();

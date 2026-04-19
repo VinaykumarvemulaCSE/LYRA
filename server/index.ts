@@ -18,7 +18,18 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 console.log("[LYRA] Booting v2.0.1 (Express 5 Audited)...");
 
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+      "connect-src": ["'self'", "https://*.googleapis.com", "https://*.firebaseio.com", "https://*.firebase.com"],
+      "script-src": ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://*.googleapis.com", "https://*.firebase.com"],
+      "img-src": ["'self'", "data:", "https://firebasestorage.googleapis.com", "https://*.githubusercontent.com", "https://*.cloudinary.com"],
+      "frame-src": ["'self'", "https://*.firebaseapp.com", "https://*.firebase.com"]
+    }
+  }
+}));
+
 app.use(cors({
   origin: process.env.CLIENT_URL || "*",
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],

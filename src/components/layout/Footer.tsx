@@ -31,6 +31,9 @@ const footerLinks = {
 };
 
 export default function Footer() {
+  const isExcluded = window.location.pathname.startsWith("/admin") || window.location.pathname === "/checkout";
+  if (isExcluded) return null;
+
   return (
     <footer className="border-t border-border bg-background/60 backdrop-blur-md mt-auto relative z-10">
       <div className="container py-16">

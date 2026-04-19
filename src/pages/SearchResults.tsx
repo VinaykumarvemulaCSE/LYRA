@@ -3,6 +3,7 @@ import { useSearchParams, Link } from "react-router-dom";
 import { Search, Loader2 } from "lucide-react";
 import { dataService, Product as FirestoreProduct } from "@/services/dataService";
 import ProductCard from "@/components/product/ProductCard";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function SearchResults() {
   const [searchParams] = useSearchParams();
@@ -35,8 +36,16 @@ export default function SearchResults() {
           </form>
         </div>
         {isLoading ? (
-          <div className="text-center py-20 flex justify-center">
-            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+              <div key={i} className="space-y-4">
+                <Skeleton className="aspect-[4/5] w-full rounded-2xl" />
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-3/4 rounded-lg" />
+                  <Skeleton className="h-4 w-1/4 rounded-lg" />
+                </div>
+              </div>
+            ))}
           </div>
         ) : results.length === 0 ? (
           <div className="text-center py-20 glass-strong rounded-2xl">

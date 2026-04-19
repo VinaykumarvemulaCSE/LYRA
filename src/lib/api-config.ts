@@ -24,4 +24,20 @@ export const API_ROUTES = {
   WELCOME_EMAIL: `${API_BASE_URL}/api/email/welcome`,
   SHIPPING_EMAIL: `${API_BASE_URL}/api/email/shipping`,
   DIAGNOSTICS: `${API_BASE_URL}/api/admin/diagnostics`,
+  MAINTENANCE: `${API_BASE_URL}/api/admin/maintenance`,
+  CSRF: `${API_BASE_URL}/api/csrf-token`,
 };
+
+export let csrfToken = "";
+
+export async function initCsrfToken() {
+  try {
+    const res = await fetch(API_ROUTES.CSRF);
+    if (res.ok) {
+      const data = await res.json();
+      csrfToken = data.token;
+    }
+  } catch (error) {
+    console.warn("Could not fetch CSRF token", error);
+  }
+}

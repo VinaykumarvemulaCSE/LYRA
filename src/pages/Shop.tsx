@@ -6,6 +6,7 @@ import ProductCard from "@/components/product/ProductCard";
 import { categories, getPriceRange, products as staticProducts } from "@/data/products";
 import { dataService, Product as FirestoreProduct } from "@/services/dataService";
 import { Skeleton } from "@/components/ui/skeleton";
+import { withRetry } from "@/lib/utils";
 import { 
   Sheet, 
   SheetContent, 
@@ -30,8 +31,8 @@ export default function Shop() {
   const [priceRange, setPriceRange] = useState([minLimit, maxLimit]);
   const [sortBy, setSortBy] = useState("featured");
   // Start with static products so the page is never empty on first render
-  const [dbProducts, setDbProducts] = useState<FirestoreProduct[]>(staticProducts as FirestoreProduct[]);
-  const [loading, setLoading] = useState(false);
+  const [dbProducts, setDbProducts] = useState<FirestoreProduct[]>([]);
+  const [loading, setLoading] = useState(true);
   
   // Pagination
   const ITEMS_PER_PAGE = 12;
@@ -41,8 +42,9 @@ export default function Shop() {
     const fetchProducts = async () => {
       try {
         setLoading(true);
-        const data = await dataService.products.getAll();
-        if (data.length > 0) setDbProducts(data);
+        // Use withRetry for connection resilience as requested
+        const data = await withRetry(() => dataService.products.getAll(), 3, 1000);
+        setDbProducts(data);
       } catch (error) {
         console.error("Shop fetch error:", error);
       } finally {

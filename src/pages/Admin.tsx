@@ -4,7 +4,7 @@ import {
   LayoutDashboard, ShoppingBag, ClipboardList, Users, BarChart3, Tags, Settings, LogOut, 
   Plus, Search, Edit2, Trash2, Eye, Package, Loader2, Rocket, RefreshCw, Check, X, 
   TrendingUp, CreditCard, ArrowUpRight, ChevronDown, ToggleLeft, ToggleRight, Upload,
-  ShieldCheck, AlertCircle, Terminal, Cloud, Database
+  ShieldCheck, AlertCircle, Terminal, Cloud, Database, Hammer, Wrench, Star
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatPrice } from "@/data/products";
@@ -12,9 +12,11 @@ import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/context/AuthContext";
 import { dataService, Product as FirestoreProduct, Order, UserProfile, Promotion } from "@/services/dataService";
+import { isUserAdmin } from "@/lib/constants";
 import { githubService } from "@/services/githubService";
 import { products as staticProducts } from "@/data/products";
-import { API_ROUTES } from "@/lib/api-config";
+import { API_ROUTES, csrfToken } from "@/lib/api-config";
+import { withRetry } from "@/lib/utils";
 
 // ─── TYPES ────────────────────────────────────
 interface EditingProduct extends Partial<FirestoreProduct> { _isNew?: boolean; }
@@ -33,6 +35,7 @@ export default function Admin() {
   const [dbPromos, setDbPromos] = useState<Promotion[]>([]);
   const [productSearch, setProductSearch] = useState("");
   const [orderFilter, setOrderFilter] = useState("all");
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   // Edit states
   const [editingProduct, setEditingProduct] = useState<EditingProduct | null>(null);
@@ -45,36 +48,59 @@ export default function Admin() {
   const [isDeploying, setIsDeploying] = useState(false);
   const [diagResults, setDiagResults] = useState<any>(null);
   const [isCheckingDiag, setIsCheckingDiag] = useState(false);
+  const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
+  const [isMaintenanceRunning, setIsMaintenanceRunning] = useState(false);
 
   // Auth guard - WARNING: Client-side only, bypassable. 
   // TODO: Implement Firebase Security Rules or server-side admin verification
   useEffect(() => {
     if (loading) return;
     if (!user) { navigate("/auth"); return; }
-    const adminEmails = [import.meta.env.VITE_ADMIN_EMAIL || "kumarvinay072007@gmail.com"];
-    if (!adminEmails.includes(user.email || "")) {
+    if (!isUserAdmin(user.email)) {
       console.warn("Admin access denied - client side check only");
       toast.error("Access Restricted"); navigate("/");
     }
   }, [user, loading, navigate]);
 
-  // Data fetcher
+  // Real-time subscriptions
+  useEffect(() => {
+    if (loading || !user) return;
+    
+    const unsubProducts = dataService.products.subscribe(setDbProducts);
+    const unsubOrders = dataService.orders.subscribe(setDbOrders);
+    const unsubUsers = dataService.users.subscribe(setDbUsers);
+    
+    // Promotions still use fetch on tab change for now, or we could subscribe too
+    if (activeTab === "promotions") {
+      dataService.promotions.getAll().then(setDbPromos);
+    }
+    
+    if (activeTab === "settings") {
+      dataService.settings.get().then(setStoreSettings as any);
+    }
+
+    return () => {
+      unsubProducts();
+      unsubOrders();
+      unsubUsers();
+    };
+  }, [user, loading, activeTab]);
+
+  // Data fetcher for manual refresh and initial load
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
-      if (activeTab === "dashboard" || activeTab === "products" || activeTab === "deploy") {
-        const data = await dataService.products.getAll();
-        setDbProducts(data);
-        setDbProductCount(data.length);
-      }
-      if (activeTab === "dashboard" || activeTab === "orders") {
-        const orders = await dataService.orders.getAll();
-        setDbOrders(orders);
-      }
-      if (activeTab === "customers") {
-        const users = await dataService.users.getAll();
-        setDbUsers(users);
-      }
+      const [products, orders, users, fsCount] = await Promise.all([
+        withRetry(() => dataService.products.getAll(), 3, 500),
+        withRetry(() => dataService.orders.getAll(), 2, 500),
+        withRetry(() => dataService.users.getAll(), 2, 500),
+        withRetry(() => dataService.products.count(), 2, 500)
+      ]);
+      setDbProducts(products);
+      setDbOrders(orders);
+      setDbUsers(users);
+      setDbProductCount(fsCount);
+
       if (activeTab === "promotions") {
         const promos = await dataService.promotions.getAll();
         setDbPromos(promos);
@@ -89,8 +115,6 @@ export default function Admin() {
     } catch (err) { console.error("Admin fetch error:", err); }
     finally { setIsLoading(false); }
   }, [activeTab]);
-
-  useEffect(() => { fetchData(); }, [fetchData]);
 
   // ─── PRODUCT HANDLERS ──────────────────────
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, isCover = false) => {
@@ -147,7 +171,6 @@ export default function Admin() {
         toast.success("Product updated!");
       }
       setEditingProduct(null);
-      await fetchData();
     } catch (err: any) { toast.error(err.message); }
     finally { setIsLoading(false); }
   };
@@ -163,6 +186,29 @@ export default function Admin() {
     await dataService.products.update(id, { inStock: !current });
     setDbProducts(prev => prev.map(p => p.id === id ? { ...p, inStock: !current } : p));
     toast.success(!current ? "Marked in stock" : "Marked out of stock");
+  };
+
+  const handleBulkDelete = async () => {
+    if (!confirm(`Delete ${selectedProductIds.length} products permanently?`)) return;
+    setIsLoading(true);
+    try {
+      await Promise.all(selectedProductIds.map(id => dataService.products.delete(id)));
+      setDbProducts(prev => prev.filter(p => !selectedProductIds.includes(p.id)));
+      setSelectedProductIds([]);
+      toast.success("Bulk deletion successful");
+    } catch (err: any) { toast.error("Bulk delete failed: " + err.message); }
+    finally { setIsLoading(false); }
+  };
+
+  const handleBulkStock = async (inStock: boolean) => {
+    setIsLoading(true);
+    try {
+      await Promise.all(selectedProductIds.map(id => dataService.products.update(id, { inStock })));
+      setDbProducts(prev => prev.map(p => selectedProductIds.includes(p.id) ? { ...p, inStock } : p));
+      setSelectedProductIds([]);
+      toast.success(`Bulk updated ${selectedProductIds.length} products`);
+    } catch (err: any) { toast.error("Bulk update failed: " + err.message); }
+    finally { setIsLoading(false); }
   };
 
   // ─── ORDER HANDLERS ────────────────────────
@@ -214,7 +260,6 @@ export default function Admin() {
     await dataService.promotions.create({ ...newPromo, usedCount: 0, expiresAt: newPromo.expiresAt || null } as any);
     toast.success("Promo created"); setShowPromoForm(false);
     setNewPromo({ code: "", discountPercent: 0, discountFlat: 0, maxUses: 100, active: true, expiresAt: "" });
-    await fetchData();
   };
 
   // ─── DEPLOY HANDLER ─────────────────────────
@@ -229,7 +274,6 @@ export default function Admin() {
         count++;
       }
       toast.success(`Deployed ${count} products to store!`);
-      await fetchData();
     } catch (err: any) { toast.error(err.message); }
     finally { setIsDeploying(false); }
   };
@@ -239,19 +283,47 @@ export default function Admin() {
   const runDiagnostics = async () => {
     setIsCheckingDiag(true);
     try {
-      const res = await fetch(API_ROUTES.DIAGNOSTICS);
+      const token = await user?.getIdToken();
+      const res = await fetch(API_ROUTES.DIAGNOSTICS, {
+        headers: { 
+          "Authorization": `Bearer ${token}`,
+          "x-csrf-token": csrfToken
+        }
+      });
       const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Diagnostics failed");
       setDiagResults(data);
-      if (data.database.status === "connected") {
-        toast.success("Systems are healthy");
-      } else {
-        toast.error("Configuration issues detected");
-      }
+      toast.success("Systems check complete");
     } catch (err: any) {
-      toast.error("Failed to reach diagnostics API");
-      setDiagResults({ error: "API Unreachable" });
+      toast.error("Diagnostic failure", { description: err.message });
+      setDiagResults(null);
     } finally {
       setIsCheckingDiag(false);
+    }
+  };
+
+  const handleMaintenance = async (action: string) => {
+    if (!confirm(`Are you sure you want to run: ${action.replace('_', ' ')}? This action is permanent.`)) return;
+    setIsMaintenanceRunning(true);
+    try {
+      const token = await user?.getIdToken();
+      const res = await fetch(API_ROUTES.MAINTENANCE, {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+          "x-csrf-token": csrfToken
+        },
+        body: JSON.stringify({ action })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message);
+      toast.success(data.message || "Action successful");
+      await fetchData();
+    } catch (err: any) {
+      toast.error("Maintenance Error", { description: err.message });
+    } finally {
+      setIsMaintenanceRunning(false);
     }
   };
 
@@ -269,8 +341,10 @@ export default function Admin() {
 
   const formatDate = (ts: any) => {
     if (!ts) return "—";
-    const d = ts.seconds ? new Date(ts.seconds * 1000) : ts instanceof Date ? ts : null;
-    return d ? d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "—";
+    // Handle Firestore Timestamp, structured JSON (_seconds), or JS Date
+    const seconds = ts.seconds || ts._seconds;
+    const d = seconds ? new Date(seconds * 1000) : (ts instanceof Date ? ts : (typeof ts === 'string' ? new Date(ts) : null));
+    return d && !isNaN(d.getTime()) ? d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "—";
   };
 
   // Revenue by category for analytics
@@ -288,6 +362,7 @@ export default function Admin() {
     { id: "promotions", label: "Promotions", icon: Tags },
     { id: "settings", label: "Settings", icon: Settings },
     { id: "diagnostics", label: "Diagnostics", icon: ShieldCheck },
+    { id: "maintenance", label: "Maintenance", icon: Hammer },
     { id: "deploy", label: "Deploy / DB", icon: Rocket },
   ];
 
@@ -296,13 +371,28 @@ export default function Admin() {
   // ═══════════════════════════════════════════
   return (
     <div className="flex min-h-screen">
-      {/* Sidebar */}
-      <aside className="w-64 glass-strong flex flex-col pt-20 flex-shrink-0 fixed top-0 left-0 bottom-0 z-40">
-        <div className="p-6 flex-1">
+      {/* Mobile Sidebar Toggle - Positioned better relative to Navbar */}
+      <div className="lg:hidden fixed bottom-24 right-6 z-50">
+        <Button 
+          variant="outline" 
+          size="icon" 
+          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+          className="w-14 h-14 rounded-full shadow-2xl bg-primary text-primary-foreground border-0 hover:bg-primary/90"
+        >
+          {isSidebarOpen ? <X className="w-6 h-6" /> : <LayoutDashboard className="w-6 h-6" />}
+        </Button>
+      </div>
+
+      {/* Sidebar - Responsive */}
+      <aside className={`
+        fixed top-0 left-0 bottom-0 z-40 w-64 glass-strong flex flex-col pt-20 transition-transform duration-300 ease-in-out
+        ${isSidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
+      `}>
+        <div className="p-6 flex-1 overflow-y-auto">
           <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-4">Admin Panel</p>
           <nav className="space-y-1">
             {sidebarLinks.map(({ id, label, icon: Icon }) => (
-              <button key={id} onClick={() => setActiveTab(id)}
+              <button key={id} onClick={() => { setActiveTab(id); setIsSidebarOpen(false); }}
                 className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
                   activeTab === id ? "gradient-primary text-primary-foreground shadow-md" : "text-muted-foreground hover:bg-secondary hover:text-foreground"
                 }`}>
@@ -321,8 +411,13 @@ export default function Admin() {
         </div>
       </aside>
 
+      {/* Backdrop for mobile */}
+      {isSidebarOpen && (
+        <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-30 lg:hidden" onClick={() => setIsSidebarOpen(false)} />
+      )}
+
       {/* Main */}
-      <main className="flex-1 ml-64 p-8 pt-24 overflow-y-auto">
+      <main className="flex-1 w-full lg:ml-64 p-4 md:p-8 pt-24 overflow-y-auto min-h-screen">
         <div className="max-w-6xl mx-auto">
           {isLoading && !editingProduct ? (
             <div className="space-y-8">
@@ -399,44 +494,116 @@ export default function Admin() {
                 <input type="text" placeholder="Search products..." value={productSearch} onChange={(e) => setProductSearch(e.target.value)}
                   className="w-full h-11 pl-11 pr-4 glass rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
               </div>
+              <div className="flex justify-between items-center bg-secondary/20 p-4 rounded-xl border border-border/10 empty:hidden">
+                {selectedProductIds.length > 0 && (
+                  <div className="flex items-center gap-4">
+                    <span className="text-xs font-bold text-primary">{selectedProductIds.length} selected</span>
+                    <Button 
+                      variant="destructive" 
+                      size="sm" 
+                      className="h-8 rounded-lg text-[10px] font-black uppercase tracking-widest"
+                      onClick={handleBulkDelete}
+                    >
+                      Delete Selected
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="h-8 rounded-lg text-[10px] font-black uppercase tracking-widest glass"
+                      onClick={() => handleBulkStock(true)}
+                    >
+                      Set In Stock
+                    </Button>
+                  </div>
+                )}
+              </div>
+
               {dbProducts.length === 0 ? (
-                <div className="text-center py-20 glass-strong rounded-2xl">
-                  <Package className="w-12 h-12 mx-auto mb-4 text-muted-foreground opacity-30" />
-                  <p className="font-bold mb-2">No products in database</p>
-                  <p className="text-sm text-muted-foreground mb-6">Use the Deploy tab to push your initial catalog.</p>
-                  <Button onClick={() => setActiveTab("deploy")} className="gradient-primary border-0 rounded-xl"><Rocket className="w-4 h-4 mr-2" /> Go to Deploy</Button>
+                <div className="text-center py-20 glass-strong rounded-3xl border border-border/10">
+                  <Package className="w-16 h-16 mx-auto mb-4 text-primary opacity-20" />
+                  <p className="text-xl font-bold mb-2">No products found</p>
+                  <p className="text-sm text-muted-foreground mb-8 max-w-sm mx-auto">Your store catalog is empty. You can add products manually or deploy the initial collection.</p>
+                  <div className="flex justify-center gap-4">
+                    <Button onClick={openNewProduct} className="gradient-primary border-0 rounded-xl h-12 px-6">Add Manually</Button>
+                    <Button variant="outline" onClick={() => setActiveTab("deploy")} className="glass rounded-xl h-12 px-6">Go to Deploy</Button>
+                  </div>
                 </div>
               ) : (
-                <div className="glass-strong rounded-2xl overflow-hidden">
-                  <table className="w-full text-sm text-left">
-                    <thead className="bg-secondary/50 text-muted-foreground text-xs uppercase font-bold">
-                      <tr><th className="px-6 py-4">Product</th><th className="px-6 py-4">Category</th><th className="px-6 py-4">Stock</th><th className="px-6 py-4">Price</th><th className="px-6 py-4 text-right">Actions</th></tr>
-                    </thead>
-                    <tbody className="divide-y divide-border/30">
-                      {dbProducts.filter(p => !productSearch || p.name.toLowerCase().includes(productSearch.toLowerCase()) || p.brand?.toLowerCase().includes(productSearch.toLowerCase()))
-                        .map(p => (
-                        <tr key={p.id} className="hover:bg-secondary/30 transition-colors">
-                          <td className="px-6 py-4"><div className="flex items-center gap-3">
-                            <div className="w-10 h-12 rounded-lg overflow-hidden flex-shrink-0"><img src={p.image} alt="" className="w-full h-full object-cover" /></div>
-                            <div><p className="font-bold">{p.name}</p><p className="text-xs text-muted-foreground">{p.brand}</p></div>
-                          </div></td>
-                          <td className="px-6 py-4 text-muted-foreground">{p.category}</td>
-                          <td className="px-6 py-4">
-                            <button onClick={() => handleToggleStock(p.id, p.inStock)} className={`px-2 py-1 rounded-lg text-xs font-bold cursor-pointer transition-colors ${p.inStock ? "text-emerald-600 bg-emerald-50 hover:bg-emerald-100" : "text-red-600 bg-red-50 hover:bg-red-100"}`}>
-                              {p.inStock ? "In Stock" : "Out of Stock"}
-                            </button>
-                          </td>
-                          <td className="px-6 py-4 font-medium">{formatPrice(p.price)}</td>
-                          <td className="px-6 py-4 text-right">
-                            <div className="flex items-center justify-end gap-1">
-                              <button onClick={() => openEditProduct(p)} className="p-2 rounded-lg hover:bg-secondary text-muted-foreground hover:text-primary"><Edit2 className="w-4 h-4" /></button>
-                              <button onClick={() => handleDeleteProduct(p.id, p.name)} className="p-2 rounded-lg hover:bg-secondary text-muted-foreground hover:text-destructive"><Trash2 className="w-4 h-4" /></button>
-                            </div>
-                          </td>
+                <div className="glass-strong rounded-2xl overflow-hidden border border-border/10 shadow-sm">
+                  <div className="overflow-x-auto scrollbar-hide">
+                    <table className="w-full text-sm text-left border-collapse min-w-[800px]">
+                      <thead className="bg-secondary/50 text-muted-foreground text-[10px] uppercase font-black tracking-widest border-b border-border/10">
+                        <tr>
+                          <th className="px-6 py-4 w-10">
+                            <input 
+                              type="checkbox" 
+                              checked={selectedProductIds.length === dbProducts.length && dbProducts.length > 0}
+                              onChange={(e) => {
+                                if (e.target.checked) setSelectedProductIds(dbProducts.map(p => p.id));
+                                else setSelectedProductIds([]);
+                              }}
+                              className="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4"
+                            />
+                          </th>
+                          <th className="px-6 py-4">Product</th>
+                          <th className="px-6 py-4">Category</th>
+                          <th className="px-6 py-4">Stock</th>
+                          <th className="px-6 py-4">Price</th>
+                          <th className="px-6 py-4 text-right">Actions</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody className="divide-y divide-border/10">
+                        {dbProducts.filter(p => !productSearch || p.name.toLowerCase().includes(productSearch.toLowerCase()) || p.brand?.toLowerCase().includes(productSearch.toLowerCase()))
+                          .map(p => (
+                          <tr key={p.id} className="group hover:bg-secondary/20 transition-colors">
+                            <td className="px-6 py-4">
+                              <input 
+                                type="checkbox" 
+                                checked={selectedProductIds.includes(p.id)}
+                                onChange={() => {
+                                  setSelectedProductIds(prev => 
+                                    prev.includes(p.id) ? prev.filter(id => id !== p.id) : [...prev, p.id]
+                                  );
+                                }}
+                                className="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4"
+                              />
+                            </td>
+                            <td className="px-6 py-4">
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-muted border border-border/10">
+                                  <img src={p.image} alt="" className="w-full h-full object-cover" />
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="font-bold truncate max-w-[200px]">{p.name}</p>
+                                  <p className="text-[10px] text-muted-foreground font-medium">{p.brand}</p>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 text-muted-foreground font-medium">{p.category}</td>
+                            <td className="px-6 py-4">
+                              <button 
+                                onClick={() => handleToggleStock(p.id, p.inStock)} 
+                                className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-tighter transition-all ${
+                                  p.inStock 
+                                    ? "bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20" 
+                                    : "bg-destructive/10 text-destructive hover:bg-destructive/20"
+                                }`}
+                              >
+                                {p.inStock ? "Live" : "Sold Out"}
+                              </button>
+                            </td>
+                            <td className="px-6 py-4 font-black">{formatPrice(p.price)}</td>
+                            <td className="px-6 py-4 text-right">
+                              <div className="flex items-center justify-end gap-1">
+                                <button onClick={() => openEditProduct(p)} className="p-2 rounded-xl hover:bg-primary/10 text-primary transition-all active:scale-95"><Edit2 className="w-4 h-4" /></button>
+                                <button onClick={() => handleDeleteProduct(p.id, p.name)} className="p-2 rounded-xl hover:bg-destructive/10 text-destructive transition-all active:scale-95"><Trash2 className="w-4 h-4" /></button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               )}
             </div>
@@ -536,7 +703,10 @@ export default function Admin() {
                   </div>
                 </div>
                 <div className="flex gap-4 pt-4 border-t border-white/5">
-                  <Button disabled={isLoading} onClick={handleSaveProduct} className="h-12 px-8 gradient-primary border-0 rounded-xl font-bold shadow-xl">
+                  <Button disabled={isLoading} onClick={async () => {
+                    await handleSaveProduct();
+                    setActiveTab("products");
+                  }} className="h-12 px-8 gradient-primary border-0 rounded-xl font-bold shadow-xl">
                     {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Check className="w-4 h-4 mr-2" /> Save Product</>}
                   </Button>
                   <Button variant="outline" className="h-12 px-8 rounded-xl glass-subtle" onClick={() => setEditingProduct(null)}>Cancel</Button>
@@ -593,15 +763,18 @@ export default function Admin() {
               {dbUsers.length === 0 ? (
                 <div className="text-center py-16 glass-strong rounded-2xl"><p className="text-muted-foreground">No users found in database.</p></div>
               ) : (
-                <div className="glass-strong rounded-2xl overflow-hidden">
+                <div className="glass-strong rounded-2xl overflow-x-auto">
                   <table className="w-full text-sm text-left">
                     <thead className="bg-secondary/50 text-muted-foreground text-xs uppercase font-bold">
                       <tr><th className="px-6 py-4">Customer</th><th className="px-6 py-4">Email</th><th className="px-6 py-4">Role</th><th className="px-6 py-4">Joined</th></tr>
                     </thead>
                     <tbody className="divide-y divide-border/30">
                       {dbUsers.map(u => (
-                        <tr key={u.uid} className="hover:bg-secondary/30">
-                          <td className="px-6 py-4 font-bold">{u.displayName || "Anonymous"}</td>
+                        <tr key={u.uid} className="hover:bg-secondary/30 whitespace-nowrap lg:whitespace-normal">
+                          <td className="px-6 py-4"><div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center font-bold text-primary flex-shrink-0">{u.displayName?.[0] || 'U'}</div>
+                            <span className="font-bold">{u.displayName || "Anonymous"}</span>
+                          </div></td>
                           <td className="px-6 py-4 text-muted-foreground">{u.email || "—"}</td>
                           <td className="px-6 py-4">
                             <select value={u.role || "user"} onChange={e => { dataService.users.updateRole(u.uid, e.target.value as any); setDbUsers(prev => prev.map(x => x.uid === u.uid ? { ...x, role: e.target.value as any } : x)); toast.success("Role updated"); }}
@@ -609,7 +782,7 @@ export default function Admin() {
                               <option value="user">User</option><option value="vip">VIP</option><option value="admin">Admin</option>
                             </select>
                           </td>
-                          <td className="px-6 py-4 text-muted-foreground">{formatDate(u.createdAt)}</td>
+                          <td className="px-6 py-4 text-muted-foreground">{u.createdAt ? formatDate(u.createdAt) : "Recently"}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -734,7 +907,19 @@ export default function Admin() {
                   <div><label className="text-xs font-bold uppercase tracking-wider mb-1 block">Support Email</label>
                     <input type="email" value={storeSettings.supportEmail} onChange={e => setStoreSettings(p => ({ ...p, supportEmail: e.target.value }))} className="w-full h-11 px-4 glass rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" /></div>
                 </div>
-                <Button onClick={async () => { await dataService.settings.update(storeSettings); toast.success("Settings saved"); }} className="gradient-primary border-0 rounded-xl">Save Changes</Button>
+                <Button disabled={isLoading} onClick={async () => { 
+                  setIsLoading(true);
+                  try {
+                    await dataService.settings.update(storeSettings); 
+                    toast.success("Settings saved"); 
+                  } catch (err) {
+                    toast.error("Failed to save settings");
+                  } finally {
+                    setIsLoading(false);
+                  }
+                }} className="h-12 px-8 gradient-primary border-0 rounded-xl font-bold">
+                  {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Save Changes"}
+                </Button>
               </div>
             </div>
           )}
@@ -806,7 +991,7 @@ export default function Admin() {
                           <p className="mt-4 text-[10px] font-mono p-3 bg-black/20 rounded-lg text-destructive-foreground/70 break-all">{diagResults.database.error}</p>
                         )}
                         {diagResults?.database?.status === 'connected' && (
-                          <p className="mt-4 text-xs font-bold text-emerald-600">Successfully fetched {diagResults.database.count} products from Firestore.</p>
+                          <p className="mt-4 text-xs font-bold text-emerald-600">Successfully verified {diagResults.database.stats?.products} products and {diagResults.database.stats?.orders} orders.</p>
                         )}
                       </div>
                     </div>
@@ -819,31 +1004,85 @@ export default function Admin() {
           {/* ── DEPLOY / DB TOOLS ──────────────── */}
           {activeTab === "deploy" && (
             <div className="space-y-6">
-              <h1 className="font-heading text-3xl font-bold">Deploy / DB Tools</h1>
+              <h1 className="font-heading text-3xl font-bold">Deploy Catalog</h1>
               <div className="glass-strong rounded-2xl p-8">
                 <div className="flex items-center gap-6 mb-8">
                   <div className="w-16 h-16 rounded-2xl gradient-primary flex items-center justify-center text-primary-foreground"><Rocket className="w-8 h-8" /></div>
                   <div>
-                    <h3 className="font-heading font-bold text-xl">Deploy Initial Catalog</h3>
-                    <p className="text-sm text-muted-foreground">Push all {staticProducts.length} products from your local catalog into Firestore.</p>
+                    <h3 className="font-heading font-bold text-xl">Database Sync</h3>
+                    <p className="text-sm text-muted-foreground">Force push the localized product catalog to Firestore.</p>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4 mb-8">
                   <div className="glass-subtle rounded-xl p-4 text-center">
                     <p className="text-3xl font-heading font-bold text-primary">{dbProductCount}</p>
-                    <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">In Firestore</p>
+                    <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">In Live Database</p>
                   </div>
                   <div className="glass-subtle rounded-xl p-4 text-center">
                     <p className="text-3xl font-heading font-bold">{staticProducts.length}</p>
-                    <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">In Local Catalog</p>
+                    <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">In Static Repo</p>
                   </div>
                 </div>
                 <div className="flex gap-4">
                   <Button onClick={handleDeploy} disabled={isDeploying} className="h-14 px-8 gradient-primary border-0 rounded-xl font-bold text-base shadow-xl">
-                    {isDeploying ? <><Loader2 className="w-5 h-5 animate-spin mr-2" /> Deploying...</> : <><Rocket className="w-5 h-5 mr-2" /> Deploy to Store</>}
+                    {isDeploying ? "Deploying..." : "Sync Database"}
                   </Button>
-                  <Button variant="outline" disabled={isDeploying} onClick={fetchData} className="h-14 px-6 rounded-xl glass-subtle">
-                    <RefreshCw className="w-4 h-4 mr-2" /> Refresh Count
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ── MAINTENANCE / CLEANUP ──────────── */}
+          {activeTab === "maintenance" && (
+            <div className="space-y-6">
+              <h1 className="font-heading text-3xl font-bold">Maintenance Mode</h1>
+              <p className="text-muted-foreground">Powerful tools to prepare your store for a clean production launch.</p>
+              
+              <div className="grid md:grid-cols-2 gap-6">
+                <div className="glass-strong rounded-2xl p-6 border-l-4 border-destructive">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 rounded-xl bg-destructive/10 text-destructive flex items-center justify-center"><Trash2 className="w-5 h-5" /></div>
+                    <h3 className="font-bold">Purge Test Orders</h3>
+                  </div>
+                  <p className="text-xs text-muted-foreground mb-6">Wipe every order in Firestore. Use this once you are done testing payments to have a clean Order ID sequence for real customers.</p>
+                  <Button 
+                    onClick={() => handleMaintenance("purge_orders")} 
+                    disabled={isMaintenanceRunning}
+                    variant="destructive" 
+                    className="w-full rounded-xl font-bold uppercase tracking-widest text-[10px]"
+                  >
+                    Nuke Order History
+                  </Button>
+                </div>
+
+                <div className="glass-strong rounded-2xl p-6 border-l-4 border-primary">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center"><RefreshCw className="w-5 h-5" /></div>
+                    <h3 className="font-bold">Reset Stock Levels</h3>
+                  </div>
+                  <p className="text-xs text-muted-foreground mb-6">Resets all products to "In Stock" with a default quantity of 10. Perfect for ensuring your first real customers don't see "Sold Out" from your testing.</p>
+                  <Button 
+                    onClick={() => handleMaintenance("sync_stock")} 
+                    disabled={isMaintenanceRunning}
+                    variant="outline" 
+                    className="w-full rounded-xl font-bold uppercase tracking-widest text-[10px] border-primary text-primary"
+                  >
+                    Reset Inventory to Stock
+                  </Button>
+                </div>
+
+                <div className="glass-strong rounded-2xl p-6 border-l-4 border-amber-500">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center"><Star className="w-5 h-5" /></div>
+                    <h3 className="font-bold">Clear Test Reviews</h3>
+                  </div>
+                  <p className="text-xs text-muted-foreground mb-6">Remove all customer reviews from the database. Clean the slate so only real customer feedback is displayed on product pages.</p>
+                  <Button 
+                    onClick={() => handleMaintenance("purge_reviews")} 
+                    disabled={isMaintenanceRunning}
+                    className="w-full bg-amber-500 hover:bg-amber-600 border-0 rounded-xl font-bold uppercase tracking-widest text-[10px] text-white"
+                  >
+                    Wipe Reviews
                   </Button>
                 </div>
               </div>

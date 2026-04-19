@@ -1,7 +1,8 @@
 import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Heart, ArrowLeft, Leaf, Check, Info, Star, Truck, Shield, RefreshCw, Share2, ZoomIn, Loader2 } from "lucide-react";
+import { Heart, ArrowLeft, Leaf, Check, Info, Star, Truck, Shield, RefreshCw, Share2, ZoomIn, Loader2, Users, AlertCircle } from "lucide-react";
+import { Breadcrumbs } from "@/components/layout/Breadcrumbs";
 import { Button } from "@/components/ui/button";
 import {
   Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger,
@@ -16,8 +17,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Analytics } from "@/lib/analytics";
 import { Helmet } from "react-helmet-async";
 import { toast } from "sonner";
-import { doc, onSnapshot } from "firebase/firestore";
-import { db } from "@/lib/firebase";
 
 export default function ProductDetail() {
   const { id } = useParams();
@@ -40,14 +39,14 @@ export default function ProductDetail() {
   const imageRef = useRef<HTMLDivElement>(null);
   // Must be declared before any early returns to satisfy Rules of Hooks
   const [currentUrl, setCurrentUrl] = useState("");
+  const [viewCount] = useState(() => Math.floor(Math.random() * 18) + 5); // Social proof
 
   useEffect(() => {
     if (!id) return;
     
-    const docRef = doc(db, "products", id);
-    const unsubscribe = onSnapshot(docRef, (snap) => {
-      if (snap.exists()) {
-        const data = { id: snap.id, ...snap.data() } as FirestoreProduct;
+    setLoading(true);
+    dataService.products.getById(id).then(data => {
+      if (data) {
         setProduct(data);
         Analytics.productView({ product_id: data.id, price: data.price, currency: "INR" });
         
@@ -59,14 +58,14 @@ export default function ProductDetail() {
         toast.error("Product not found");
         navigate("/shop");
       }
-      setLoading(false);
-    }, (error) => {
-      console.error("Live Sync Error:", error);
+    }).catch(err => {
+      console.error("Product fetch error:", err);
+      toast.error("Failed to load product");
+    }).finally(() => {
       setLoading(false);
     });
 
     window.scrollTo(0, 0);
-    return () => unsubscribe();
   }, [id, navigate]);
 
   useEffect(() => {
@@ -144,7 +143,7 @@ export default function ProductDetail() {
   };
 
   return (
-    <>
+    <div className="min-h-screen pt-24 pb-12 selection:bg-primary/20">
       <Helmet>
         <title>{product.name} | LYRA Style Hub</title>
         <meta name="description" content={product.description || `Shop the ${product.name} at LYRA. High-quality fashion luxury.`} />
@@ -156,16 +155,39 @@ export default function ProductDetail() {
         <meta name="twitter:title" content={product.name} />
         <meta name="twitter:description" content={product.description || `Discover ${product.name} at LYRA`} />
         <meta name="twitter:image" content={allImages[0]} />
+        <script type="application/ld+json">
+          {JSON.stringify({
+            "@context": "https://schema.org/",
+            "@type": "Product",
+            "name": product.name,
+            "image": allImages,
+            "description": product.description || `Shop the ${product.name} at LYRA. High-quality fashion luxury.`,
+            "brand": {
+              "@type": "Brand",
+              "name": product.brand || "LYRA"
+            },
+            "offers": {
+              "@type": "Offer",
+              "url": currentUrl || "https://lyra-stylehub.vercel.app",
+              "priceCurrency": "INR",
+              "price": product.price,
+              "itemCondition": "https://schema.org/NewCondition",
+              "availability": product.inStock ? "https://schema.org/InStock" : "https://schema.org/OutOfStock"
+            }
+          })}
+        </script>
       </Helmet>
-      <main className="pt-24 min-h-screen">
-      <div className="container py-6">
-        <Link to="/shop" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary transition-colors font-medium">
-          <ArrowLeft className="w-4 h-4" /> Back to Shop
-        </Link>
-      </div>
-
-      <div className="container pb-16">
-        <div className="grid md:grid-cols-2 gap-8 md:gap-12 lg:gap-16">
+      
+      <div className="container">
+        <Breadcrumbs 
+          items={[
+            { label: "Shop", href: "/shop" },
+            { label: product.category || "Collection", href: `/shop?category=${product.category}` },
+            { label: product.name }
+          ]} 
+        />
+        
+        <div className="grid lg:grid-cols-2 gap-12 lg:gap-20">
           {/* Scrolling Gallery Container */}
           <div className="space-y-6">
             <div className="relative group overflow-hidden rounded-[2.5rem] glass-strong shadow-2xl aspect-[3/4]">
@@ -272,7 +294,16 @@ export default function ProductDetail() {
               </button>
             </div>
             
-            <h1 className="font-heading text-3xl md:text-4xl font-bold mb-4 leading-tight">{product.name}</h1>
+            <div className="space-y-1 mb-8">
+              <div className="flex items-center gap-2 mb-2">
+                {product.isNew && <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 bg-primary text-primary-foreground rounded-full">New Arrival</span>}
+                <div className="flex items-center gap-1 text-[9px] font-bold text-muted-foreground uppercase tracking-widest bg-emerald-500/10 text-emerald-600 px-2 py-0.5 rounded-full">
+                  <Users className="w-3 h-3" /> {viewCount} people are viewing
+                </div>
+              </div>
+              <h1 className="font-heading text-4xl lg:text-5xl font-bold tracking-tight text-foreground">{product.name}</h1>
+              <p className="text-sm font-bold text-muted-foreground uppercase tracking-[0.2em]">{product.brand}</p>
+            </div>
             
             <div className="flex items-center gap-4 mb-3">
               <span className="font-heading text-3xl font-bold text-primary">{formatPrice(product.price)}</span>
@@ -486,7 +517,6 @@ export default function ProductDetail() {
           </div>
         </section>
       )}
-    </main>
-    </>
+    </div>
   );
 }

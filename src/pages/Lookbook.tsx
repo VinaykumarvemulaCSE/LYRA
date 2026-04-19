@@ -1,10 +1,11 @@
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, ArrowRight, ShoppingBag } from "lucide-react";
-import { products, formatPrice } from "@/data/products";
-import { useState } from "react";
+import { Plus, ArrowRight, ShoppingBag, Loader2 } from "lucide-react";
+import { formatPrice } from "@/data/products";
+import { dataService, Product as FirestoreProduct } from "@/services/dataService";
 
-const looks = [
+const staticLooks = [
   { 
     image: "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=1962", 
     title: "Summer Minimal",
@@ -33,6 +34,26 @@ const looks = [
 
 export default function Lookbook() {
   const [activeHotspot, setActiveHotspot] = useState<{lookIndex: number, hotspotIndex: number} | null>(null);
+  const [products, setProducts] = useState<FirestoreProduct[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    dataService.products.getAll().then(data => {
+      setProducts(data);
+      setLoading(false);
+    }).catch(err => {
+      console.error(err);
+      setLoading(false);
+    });
+  }, []);
+
+  if (loading) {
+    return (
+      <main className="pt-32 pb-24 min-h-screen flex items-center justify-center">
+        <Loader2 className="w-10 h-10 text-primary animate-spin" />
+      </main>
+    );
+  }
 
   return (
     <main className="pt-24 pb-0 bg-background/50">
@@ -62,7 +83,7 @@ export default function Lookbook() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 lg:gap-24 container max-w-[1400px] pb-32">
-        {looks.map((look, i) => (
+        {staticLooks.map((look, i) => (
           <motion.div
             key={i}
             initial={{ opacity: 0, y: 40 }}

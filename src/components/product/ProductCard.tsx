@@ -7,6 +7,7 @@ import { useState } from "react";
 import { useCart } from "@/context/CartContext";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { OptimizedImage } from "@/components/ui/OptimizedImage";
 
 interface ProductCardProps {
   product: FirestoreProduct;
@@ -27,6 +28,8 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
 
   const secondaryImage = (product?.images && Array.isArray(product.images) && product.images.length > 1) ? product.images[1] : (product?.image || "");
   const primaryColor = (product?.variants && Array.isArray(product.variants) && product.variants.length > 0 && product.variants[0]?.colorHex) ? product.variants[0].colorHex : "#000000";
+  const totalStock = product.variants?.reduce((sum, v) => sum + (v.stock || 0), 0) || 0;
+  const isLowStock = totalStock > 0 && totalStock <= 5;
 
   const handleQuickAdd = (size: string) => {
     // Using the first variant's color as default for quick-add
@@ -50,17 +53,15 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
     >
       <div className="relative overflow-hidden rounded-2xl bg-card aspect-[3/4] shadow-sm group-hover:shadow-xl transition-all duration-500 border border-border/10">
         <Link to={`/product/${product.id}`} className="block h-full relative">
-          <img
+          <OptimizedImage
             src={product.image}
             alt={product.name}
             className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ${isHovered ? "opacity-0" : "opacity-100"}`}
-            loading="lazy"
           />
-          <img
+          <OptimizedImage
             src={secondaryImage}
             alt={`${product.name} alternate`}
             className={`absolute inset-0 w-full h-full object-cover transition-all duration-700 scale-105 group-hover:scale-100 ${isHovered ? "opacity-100" : "opacity-0"}`}
-            loading="lazy"
           />
         </Link>
 
@@ -74,6 +75,11 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
           {product.originalPrice && (
             <span className="px-3 py-1 text-[10px] font-bold tracking-widest uppercase bg-destructive text-white rounded-lg shadow-lg">
               -{Math.round((1 - product.price / product.originalPrice) * 100)}%
+            </span>
+          )}
+          {isLowStock && (
+            <span className="px-3 py-1 text-[10px] font-bold tracking-widest uppercase bg-amber-500 text-white rounded-lg shadow-lg animate-pulse">
+              Limited Stock
             </span>
           )}
         </div>

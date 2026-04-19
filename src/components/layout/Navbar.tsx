@@ -7,6 +7,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { formatPrice } from "@/data/products";
 import { dataService, Product as FirestoreProduct } from "@/services/dataService";
 import { LogOut, Settings, User as UserIcon, Shield } from "lucide-react";
+import { useDebounce } from "@/hooks/use-debounce";
+import { isUserAdmin } from "@/lib/constants";
 
 const navLinks = [
   { label: "Men", href: "/shop?category=Men" },
@@ -26,6 +28,7 @@ export default function Navbar() {
   const [searchQuery, setSearchQuery] = useState("");
   const [suggestions, setSuggestions] = useState<FirestoreProduct[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(-1);
+  const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const location = useLocation();
   const navigate = useNavigate();
   const searchRef = useRef<HTMLDivElement>(null);
@@ -41,6 +44,15 @@ export default function Navbar() {
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener("scroll", handleScroll);
+    
+    // Load recent searches on mount
+    const saved = localStorage.getItem("lyra_recent_searches");
+    if (saved) {
+      try {
+        setRecentSearches(JSON.parse(saved));
+      } catch (e) {}
+    }
+    
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
@@ -58,43 +70,69 @@ export default function Navbar() {
     };
   }, [menuOpen]);
 
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
+
   useEffect(() => {
-    if (searchQuery.trim().length > 1) {
-      const timer = setTimeout(async () => {
+    if (debouncedSearchQuery.trim().length > 1) {
+      const fetchSuggestions = async () => {
         try {
-          const results = await dataService.products.searchProducts(searchQuery, 5);
+          const results = await dataService.products.searchProducts(debouncedSearchQuery, 5);
           setSuggestions(results);
         } catch (err) {
           console.error("Search error:", err);
         }
-      }, 300);
-      return () => clearTimeout(timer);
+      };
+      fetchSuggestions();
     } else {
       setSuggestions([]);
     }
     setSelectedIndex(-1);
-  }, [searchQuery]);
+  }, [debouncedSearchQuery]);
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
+  const saveSearch = (query: string) => {
+    if (!query) return;
+    setRecentSearches(prev => {
+      const updated = [query, ...prev.filter(q => q !== query)].slice(0, 5);
+      localStorage.setItem("lyra_recent_searches", JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const handleSearch = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     if (selectedIndex >= 0 && suggestions[selectedIndex]) {
+      saveSearch(searchQuery.trim());
       navigate(`/product/${suggestions[selectedIndex].id}`);
+      setSearchOpen(false);
     } else if (searchQuery.trim()) {
+      saveSearch(searchQuery.trim());
       navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+      setSearchOpen(false);
     }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Escape") {
+      e.preventDefault();
+      setSearchOpen(false);
+      return;
+    }
+    
     if (suggestions.length === 0) return;
 
     if (e.key === "ArrowDown") {
+      e.preventDefault();
       setSelectedIndex(prev => (prev < suggestions.length - 1 ? prev + 1 : prev));
     } else if (e.key === "ArrowUp") {
+      e.preventDefault();
       setSelectedIndex(prev => (prev > -1 ? prev - 1 : prev));
-    } else if (e.key === "Escape") {
-      setSearchOpen(false);
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      handleSearch();
     }
   };
+
+  if (location.pathname.startsWith("/admin")) return null;
 
   return (
     <>
@@ -165,7 +203,7 @@ export default function Navbar() {
                     <Link to="/account" className="flex items-center gap-2 w-full p-2 rounded-xl text-xs font-medium hover:bg-white/10 transition-colors">
                       <UserIcon className="w-3.5 h-3.5" /> Profile Settings
                     </Link>
-                    {(user?.email === (import.meta.env.VITE_ADMIN_EMAIL || "kumarvinay072007@gmail.com")) && (
+                    {isUserAdmin(user?.email) && (
                       <Link to="/admin" className="flex items-center gap-2 w-full p-2 rounded-xl text-xs font-medium hover:bg-white/10 transition-colors border-t border-white/5 mt-1 pt-2">
                         <Shield className="w-3.5 h-3.5 text-primary" /> Admin Panel
                       </Link>
@@ -239,8 +277,46 @@ export default function Navbar() {
                       )}
                     </form>
 
-                    {/* Suggestions Dropdown */}
                     <AnimatePresence>
+                      {searchQuery.trim() === "" && recentSearches.length > 0 && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: 10 }}
+                          className="absolute top-full mt-4 left-0 right-0 glass-strong border border-white/10 rounded-2xl overflow-hidden shadow-2xl z-50 p-2"
+                        >
+                          <div className="flex items-center justify-between px-4 py-3 border-b border-white/5">
+                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Recent Searches</p>
+                            <button 
+                              onClick={() => {
+                                setRecentSearches([]);
+                                localStorage.removeItem("lyra_recent_searches");
+                              }}
+                              className="text-[10px] font-bold text-muted-foreground hover:text-white transition-colors"
+                            >
+                              Clear
+                            </button>
+                          </div>
+                          <div className="flex flex-col p-2 gap-1">
+                            {recentSearches.map((search, index) => (
+                              <button
+                                key={index}
+                                onClick={() => {
+                                  setSearchQuery(search);
+                                  saveSearch(search);
+                                  navigate(`/search?q=${encodeURIComponent(search)}`);
+                                  setSearchOpen(false);
+                                }}
+                                className="flex items-center gap-3 p-3 rounded-xl transition-all hover:bg-white/10 text-left"
+                              >
+                                <Search className="w-3.5 h-3.5 text-muted-foreground" />
+                                <span className="text-sm font-medium">{search}</span>
+                              </button>
+                            ))}
+                          </div>
+                        </motion.div>
+                      )}
+
                       {suggestions.length > 0 && (
                         <motion.div
                           initial={{ opacity: 0, y: 10 }}

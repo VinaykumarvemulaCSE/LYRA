@@ -1,19 +1,20 @@
-import { 
-  collection, 
-  getDocs, 
-  getDoc, 
-  doc, 
+import {
+  collection,
+  getDocs,
+  getDoc,
+  doc,
   setDoc,
   updateDoc,
   deleteDoc,
-  query, 
-  where, 
+  query,
+  where,
   limit,
   orderBy,
   addDoc,
   Timestamp,
   serverTimestamp,
-  getCountFromServer
+  getCountFromServer,
+  onSnapshot
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
@@ -57,37 +58,45 @@ export interface Promotion {
   createdAt: any;
 }
 
+// --- STATIC INVENTORY FALLBACK ---
+import localProducts from "@/data/inventory/products.json";
+
+// Helper for fetching remote inventory
+const getInventory = async (): Promise<Product[]> => {
+  const remoteUrl = import.meta.env.VITE_GITHUB_INVENTORY_URL;
+  if (remoteUrl) {
+    try {
+      const resp = await fetch(remoteUrl);
+      if (resp.ok) return await resp.json();
+    } catch (e) {
+      console.warn("[Inventory] Remote fetch failed, using local fallback.", e);
+    }
+  }
+  return localProducts as Product[];
+};
+
 // --- DATA SERVICE HUB ---
 
 export const dataService = {
-  
-  // 1. PRODUCTS COLLECTION (Firestore only — no static fallback)
+
+  // 1. PRODUCTS COLLECTION (Hybrid: GitHub CDN / Local JSON / Firestore Fallback)
   products: {
     async getAll(pageSize: number = 100): Promise<Product[]> {
-      const q = query(collection(db, "products"), orderBy("createdAt", "desc"), limit(pageSize));
-      const snap = await getDocs(q);
-      return snap.docs.map(d => ({ id: d.id, ...d.data() } as Product));
+      try {
+        const inventory = await getInventory();
+        return inventory.slice(0, pageSize);
+      } catch (e) {
+        // Ultimate fallback to Firestore if static methods fail
+        const q = query(collection(db, "products"), orderBy("createdAt", "desc"), limit(pageSize));
+        const snap = await getDocs(q);
+        return snap.docs.map(d => ({ id: d.id, ...d.data() } as Product));
+      }
     },
     async getByCategory(category: string, pageSize: number = 50): Promise<Product[]> {
-      const q = query(
-        collection(db, "products"), 
-        where("category", "==", category),
-        orderBy("createdAt", "desc"),
-        limit(pageSize)
-      );
-      const snap = await getDocs(q);
-      return snap.docs.map(d => ({ id: d.id, ...d.data() } as Product));
+      const all = await this.getAll();
+      return all.filter(p => p.category === category).slice(0, pageSize);
     },
     async searchProducts(searchTerm: string, pageSize: number = 10): Promise<Product[]> {
-      const q = query(
-        collection(db, "products"),
-        where("name", ">=", searchTerm),
-        where("name", "<=", searchTerm + "\uf8ff"),
-        limit(pageSize)
-      );
-      const snap = await getDocs(q);
-      if (snap.docs.length > 0) return snap.docs.map(d => ({ id: d.id, ...d.data() } as Product));
-      // Broad client-side fallback from full collection
       const all = await this.getAll();
       const term = searchTerm.toLowerCase();
       return all.filter(p =>
@@ -97,18 +106,23 @@ export const dataService = {
         p.brand?.toLowerCase().includes(term)
       ).slice(0, pageSize);
     },
+    async getById(id: string) {
+      const all = await this.getAll();
+      const found = all.find(p => p.id === id);
+      if (found) return found;
+      // Fetch from Firestore as a deep fallback
+      const ref = doc(db, "products", id);
+      const snap = await getDoc(ref);
+      if (snap.exists()) return { id: snap.id, ...snap.data() } as Product;
+      return null;
+    },
+    // Keep Admin operations pointing to Firestore for now
     async add(product: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>) {
       return await addDoc(collection(db, "products"), {
         ...product,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       });
-    },
-    async getById(id: string) {
-      const ref = doc(db, "products", id);
-      const snap = await getDoc(ref);
-      if (snap.exists()) return { id: snap.id, ...snap.data() } as Product;
-      return null;
     },
     async update(id: string, updates: Partial<Product>) {
       const ref = doc(db, "products", id);
@@ -133,8 +147,20 @@ export const dataService = {
       return await deleteDoc(doc(db, "products", id));
     },
     async count(): Promise<number> {
+      // Direct Firestore count for Admin analytics
       const snap = await getCountFromServer(collection(db, "products"));
       return snap.data().count;
+    },
+    async getInventoryCount(): Promise<number> {
+      const all = await this.getAll();
+      return all.length;
+    },
+    subscribe(callback: (products: Product[]) => void, pageSize: number = 100) {
+      // For subscription, we poll the inventory or use Firestore as a live source
+      const q = query(collection(db, "products"), orderBy("createdAt", "desc"), limit(pageSize));
+      return onSnapshot(q, (snap) => {
+        callback(snap.docs.map(d => ({ id: d.id, ...d.data() } as Product)));
+      });
     }
   },
 
@@ -174,6 +200,12 @@ export const dataService = {
     async updateProfile(uid: string, updates: Partial<UserProfile>) {
       const ref = doc(db, "users", uid);
       return await updateDoc(ref, { ...updates, updatedAt: serverTimestamp() });
+    },
+    subscribe(callback: (users: UserProfile[]) => void, pageSize: number = 100) {
+      const q = query(collection(db, "users"), orderBy("createdAt", "desc"), limit(pageSize));
+      return onSnapshot(q, (snap) => {
+        callback(snap.docs.map(d => ({ uid: d.id, ...d.data() } as UserProfile)));
+      });
     }
   },
 
@@ -191,7 +223,7 @@ export const dataService = {
     },
     async getByUser(userId: string): Promise<Order[]> {
       const q = query(
-        collection(db, "orders"), 
+        collection(db, "orders"),
         where("userId", "==", userId),
         orderBy("createdAt", "desc")
       );
@@ -210,6 +242,12 @@ export const dataService = {
     async updateTracking(orderId: string, trackingNumber: string) {
       const ref = doc(db, "orders", orderId);
       return await updateDoc(ref, { trackingNumber, updatedAt: serverTimestamp() });
+    },
+    subscribe(callback: (orders: Order[]) => void, pageSize: number = 100) {
+      const q = query(collection(db, "orders"), orderBy("createdAt", "desc"), limit(pageSize));
+      return onSnapshot(q, (snap) => {
+        callback(snap.docs.map(d => ({ id: d.id, ...d.data() } as Order)));
+      });
     }
   },
 
@@ -251,14 +289,29 @@ export const dataService = {
     }
   },
 
-  // 6. SETTINGS (single doc)
+  // 6. BLOGS COLLECTION
+  blogs: {
+    async getAll(): Promise<any[]> {
+      const q = query(collection(db, "blogs"), orderBy("date", "desc"));
+      const snap = await getDocs(q);
+      return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    },
+    async getById(id: string) {
+      const snap = await getDoc(doc(db, "blogs", id));
+      return snap.exists() ? ({ id: snap.id, ...snap.data() }) : null;
+    }
+  },
+
+  // 7. SETTINGS COLLECTION
   settings: {
     async get() {
-      const snap = await getDoc(doc(db, "config", "store"));
-      return snap.exists() ? snap.data() : { storeName: "LYRA", supportEmail: "" };
+      const ref = doc(db, "settings", "global");
+      const snap = await getDoc(ref);
+      return snap.exists() ? snap.data() : { storeName: "LYRA", supportEmail: "hello@lyrastylehub.com" };
     },
-    async update(data: any) {
-      return await setDoc(doc(db, "config", "store"), { ...data, updatedAt: serverTimestamp() }, { merge: true });
+    async update(updates: any) {
+      const ref = doc(db, "settings", "global");
+      return await setDoc(ref, updates, { merge: true });
     }
   }
-};
+}

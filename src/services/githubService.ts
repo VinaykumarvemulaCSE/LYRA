@@ -5,7 +5,7 @@
  * No sensitive tokens are stored or used here in the frontend bundle.
  */
 
-import { API_ROUTES } from "@/lib/api-config";
+import { API_ROUTES, csrfToken } from "@/lib/api-config";
 import { getAuth } from "firebase/auth";
 
 export const githubService = {
@@ -35,7 +35,8 @@ export const githubService = {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
+          "Authorization": `Bearer ${token}`,
+          "x-csrf-token": csrfToken
         },
         body: JSON.stringify({
           content: base64Content,

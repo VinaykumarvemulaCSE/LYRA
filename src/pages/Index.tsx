@@ -83,25 +83,36 @@ export default function Index() {
     emblaApi.on("reInit", onSelect);
   }, [emblaApi, onSelect]);
 
+  const [isHovered, setIsHovered] = useState(false);
+  const shouldReduceMotion = motion.useReducedMotion();
+
   useEffect(() => {
-    if (!emblaApi) return;
+    if (!emblaApi || isHovered || shouldReduceMotion) return;
     const intervalId = setInterval(() => emblaApi.scrollNext(), AUTO_PLAY_INTERVAL);
     return () => clearInterval(intervalId);
-  }, [emblaApi]);
+  }, [emblaApi, isHovered, shouldReduceMotion]);
 
   return (
     <main>
       {/* Hero Section */}
-      <section className="relative pt-[72px] group/hero">
+      <section 
+        className="relative pt-[72px] group/hero"
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+      >
         <div className="overflow-hidden cursor-grab active:cursor-grabbing" ref={emblaRef}>
           <div className="flex touch-pan-y">
             {heroSlides.map((slide, i) => (
-              <div key={i} className="relative flex-[0_0_100%] min-w-0 h-[85vh] min-h-[500px] transform-gpu backface-hidden">
+              <div key={i} className="relative flex-[0_0_100%] min-w-0 h-[85vh] min-h-[500px] transform-gpu backface-hidden bg-zinc-200 animate-pulse">
                 <img
                   src={slide.image}
                   alt={slide.title}
-                  className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none"
+                  className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none transition-opacity duration-1000"
                   loading={i === 0 ? "eager" : "lazy"}
+                  onLoad={(e) => {
+                    const img = e.currentTarget;
+                    img.parentElement?.classList.remove('animate-pulse', 'bg-zinc-200');
+                  }}
                 />
                 <div className="absolute inset-0 bg-black/40 bg-gradient-to-r from-black/60 via-transparent to-transparent" />
 

@@ -8,7 +8,7 @@ import { formatPrice } from "@/data/products";
 import { Button } from "@/components/ui/button";
 import { dataService } from "@/services/dataService";
 import { toast } from "sonner";
-import { API_ROUTES } from "@/lib/api-config";
+import { API_ROUTES, csrfToken } from "@/lib/api-config";
 
 export default function Checkout() {
   const { items: contextItems, totalPrice: total, clearCart } = useCart();
@@ -31,14 +31,15 @@ export default function Checkout() {
   const [promoCodeInput, setPromoCodeInput] = useState("");
   const [appliedPromo, setAppliedPromo] = useState<any>(null);
   const [isApplyingPromo, setIsApplyingPromo] = useState(false);
+  const [showSummaryOnMobile, setShowSummaryOnMobile] = useState(false);
 
   const shipping = total > 5000 ? 0 : 500;
-  
+
   // Calculate potential discount
-  const discountAmount = appliedPromo 
-    ? (appliedPromo.discountFlat > 0 ? appliedPromo.discountFlat : (total * (appliedPromo.discountPercent / 100))) 
+  const discountAmount = appliedPromo
+    ? (appliedPromo.discountFlat > 0 ? appliedPromo.discountFlat : (total * (appliedPromo.discountPercent / 100)))
     : 0;
-    
+
   const grandTotal = Math.max(0, total + shipping - discountAmount);
 
   const handleApplyPromo = async () => {
@@ -52,7 +53,7 @@ export default function Checkout() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ code: promoCodeInput })
       });
-      
+
       const data = await response.json();
 
       if (!response.ok) {
@@ -82,7 +83,7 @@ export default function Checkout() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg("");
-    
+
     if (!user) {
       toast.error("Authentication Required", { description: "Please sign in to complete your purchase securely." });
       navigate("/auth");
@@ -90,12 +91,12 @@ export default function Checkout() {
     }
 
     setIsProcessing(true);
-    
+
     try {
       // 1. Stock Validation
       const stockCheckPromises = items.map(item => dataService.products.getById(item.id));
       const freshProducts = await Promise.all(stockCheckPromises);
-      
+
       for (const item of items) {
         const product = freshProducts.find(p => p?.id === item.id);
         if (!product) throw new Error(`Product ${item.name} not found`);
@@ -128,7 +129,10 @@ export default function Checkout() {
       // 4. Request an Order from our Serverless Backend (throws on failure — no demo bypass)
       const orderReq = await fetch(API_ROUTES.RAZORPAY_ORDER, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "x-csrf-token": csrfToken
+        },
         body: JSON.stringify({ amount: grandTotal, receipt: createdOrder.id })
       });
 
@@ -145,49 +149,54 @@ export default function Checkout() {
         image: "https://images.unsplash.com/photo-1556821840-3a63f95609a7?q=80&w=150",
         order_id: orderData.id,
         handler: async function (response: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }) {
-           try {
-              // 6. Verify signature via Serverless API
-              // Server-side handler also: updates order status, decrements stock, sends confirmation email
-              const verifyRes = await fetch(API_ROUTES.RAZORPAY_VERIFY, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  db_order_id: createdOrder.id,
-                  razorpay_order_id: response.razorpay_order_id,
-                  razorpay_payment_id: response.razorpay_payment_id,
-                  razorpay_signature: response.razorpay_signature,
-                  userEmail: formData.email,
-                })
-              });
+          try {
+            // 6. Verify signature via Serverless API
+            // Server-side handler also: updates order status, decrements stock, sends confirmation email
+            const verifyRes = await fetch(API_ROUTES.RAZORPAY_VERIFY, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                db_order_id: createdOrder.id,
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+                userEmail: formData.email,
+              })
+            });
 
-              const verifyData = await verifyRes.json();
-              if (!verifyRes.ok) throw new Error(verifyData.message || "Payment verification failed");
+            const verifyData = await verifyRes.json();
+            if (!verifyRes.ok) throw new Error(verifyData.message || "Payment verification failed");
 
-              toast.success("Payment Successful!", { description: "Your order has been confirmed." });
-              
-              // 7. Save Address to User Profile for future use
-              if (user?.uid) {
-                dataService.users.getProfile(user.uid).then(profile => {
-                  if (profile) {
-                    const existingAddresses = profile.addresses || [];
-                    // Simple check: if this street address isn't already saved
-                    const isNew = !existingAddresses.some((a: any) => a.address === formData.address);
-                    if (isNew) {
-                      dataService.users.updateProfile(user.uid, {
-                        addresses: [...existingAddresses, formData]
-                      }).catch(e => console.warn("Failed to save address to profile", e));
-                    }
+            toast.success("Payment Successful!", { description: "Your order has been confirmed." });
+
+            if (verifyData.previewUrl) {
+              console.log("Order Email Preview URL:", verifyData.previewUrl);
+              toast("Dev Mode: Check Console for Email Preview Link");
+            }
+
+            // 7. Save Address to User Profile for future use
+            if (user?.uid) {
+              dataService.users.getProfile(user.uid).then(profile => {
+                if (profile) {
+                  const existingAddresses = profile.addresses || [];
+                  // Simple check: if this street address isn't already saved
+                  const isNew = !existingAddresses.some((a: any) => a.address === formData.address);
+                  if (isNew) {
+                    dataService.users.updateProfile(user.uid, {
+                      addresses: [...existingAddresses, formData]
+                    }).catch(e => console.warn("Failed to save address to profile", e));
                   }
-                });
-              }
+                }
+              });
+            }
 
-              clearCart();
-              navigate(`/order-confirmation?orderId=${createdOrder.id}`);
-           } catch (err: unknown) {
-              const message = err instanceof Error ? err.message : "Verification failed";
-              setErrorMsg(message);
-              toast.error("Verification Failed", { description: message });
-           }
+            clearCart();
+            navigate(`/order-confirmation?orderId=${createdOrder.id}`);
+          } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : "Verification failed";
+            setErrorMsg(message);
+            toast.error("Verification Failed", { description: message });
+          }
         },
         prefill: {
           name: `${formData.firstName} ${formData.lastName}`,
@@ -234,9 +243,6 @@ export default function Checkout() {
       </main>
     );
   }
-
-  const [showSummaryOnMobile, setShowSummaryOnMobile] = useState(false);
-
   return (
     <main className="pt-24 pb-28 md:pb-16 min-h-screen bg-background/50">
       <div className="container max-w-6xl">
@@ -252,7 +258,7 @@ export default function Checkout() {
 
         {/* Mobile Summary Toggle */}
         <div className="lg:hidden mb-6">
-          <button 
+          <button
             onClick={() => setShowSummaryOnMobile(!showSummaryOnMobile)}
             className="w-full h-14 px-5 glass rounded-2xl flex items-center justify-between font-bold text-sm shadow-sm"
           >
@@ -262,7 +268,7 @@ export default function Checkout() {
             </span>
             <span>{formatPrice(grandTotal)}</span>
           </button>
-          
+
           <AnimatePresence>
             {showSummaryOnMobile && (
               <motion.div
@@ -272,25 +278,25 @@ export default function Checkout() {
                 className="overflow-hidden mt-2"
               >
                 <div className="glass-strong rounded-2xl p-6 border border-border/10">
-                   <div className="space-y-4 mb-4 pr-2">
-                      {items.map((item) => (
-                        <div key={item.id} className="flex gap-4 items-center">
-                          <div className="w-12 h-16 rounded-lg overflow-hidden flex-shrink-0 relative">
-                            <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <h4 className="font-bold text-xs truncate">{item.name}</h4>
-                            <p className="text-[10px] text-muted-foreground">{item.color} • {item.size}</p>
-                            <p className="text-xs font-black">{formatPrice(item.price)}</p>
-                          </div>
+                  <div className="space-y-4 mb-4 pr-2">
+                    {items.map((item) => (
+                      <div key={item.id} className="flex gap-4 items-center">
+                        <div className="w-12 h-16 rounded-lg overflow-hidden flex-shrink-0 relative">
+                          <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
                         </div>
-                      ))}
-                   </div>
-                   <div className="border-t border-border/30 pt-4 space-y-2 text-xs">
-                      <div className="flex justify-between font-medium"><span>Subtotal</span><span>{formatPrice(total)}</span></div>
-                      <div className="flex justify-between font-medium"><span>Shipping</span><span>{shipping === 0 ? "Free" : formatPrice(shipping)}</span></div>
-                      {discountAmount > 0 && <div className="flex justify-between text-green-500 font-bold"><span>Discount</span><span>-{formatPrice(discountAmount)}</span></div>}
-                   </div>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-bold text-xs truncate">{item.name}</h4>
+                          <p className="text-[10px] text-muted-foreground">{item.color} • {item.size}</p>
+                          <p className="text-xs font-black">{formatPrice(item.price)}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="border-t border-border/30 pt-4 space-y-2 text-xs">
+                    <div className="flex justify-between font-medium"><span>Subtotal</span><span>{formatPrice(total)}</span></div>
+                    <div className="flex justify-between font-medium"><span>Shipping</span><span>{shipping === 0 ? "Free" : formatPrice(shipping)}</span></div>
+                    {discountAmount > 0 && <div className="flex justify-between text-green-500 font-bold"><span>Discount</span><span>-{formatPrice(discountAmount)}</span></div>}
+                  </div>
                 </div>
               </motion.div>
             )}
@@ -305,14 +311,14 @@ export default function Checkout() {
               <div className="space-y-4">
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-black uppercase text-muted-foreground ml-1">Email Address</label>
-                  <input 
-                    required 
-                    type="email" 
+                  <input
+                    required
+                    type="email"
                     name="email"
                     value={formData.email}
                     onChange={handleInputChange}
-                    className="w-full h-12 px-5 glass rounded-2xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/30 border-0 shadow-inner" 
-                    placeholder="your@email.com" 
+                    className="w-full h-12 px-5 glass rounded-2xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/30 border-0 shadow-inner"
+                    placeholder="your@email.com"
                   />
                 </div>
               </div>
@@ -336,7 +342,7 @@ export default function Checkout() {
                   <input required type="text" name="lastName" value={formData.lastName} onChange={handleInputChange} className="w-full h-12 px-5 glass rounded-2xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/30 border-0 shadow-inner" placeholder="Carter" />
                 </div>
                 <div className="col-span-2 space-y-1.5">
-                  <label className="text-[10px] font-black uppercase text-muted-foreground ml-1">Street Address</label>
+                  <label className="text-[10px] font-black uppercase text-muted-foreground ml-1">Colony</label>
                   <input required type="text" name="address" value={formData.address} onChange={handleInputChange} className="w-full h-12 px-5 glass rounded-2xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/30 border-0 shadow-inner" placeholder="123 Luxury Lane" />
                 </div>
                 <div className="space-y-1.5">
@@ -344,7 +350,7 @@ export default function Checkout() {
                   <input required type="text" name="city" value={formData.city} onChange={handleInputChange} className="w-full h-12 px-5 glass rounded-2xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/30 border-0 shadow-inner" placeholder="Mumbai" />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-black uppercase text-muted-foreground ml-1">Postal Code</label>
+                  <label className="text-[10px] font-black uppercase text-muted-foreground ml-1">Pin Code</label>
                   <input required type="text" name="postalCode" value={formData.postalCode} onChange={handleInputChange} className="w-full h-12 px-5 glass rounded-2xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/30 border-0 shadow-inner" placeholder="400001" />
                 </div>
                 <div className="space-y-1.5">
@@ -391,7 +397,7 @@ export default function Checkout() {
                 )}
               </Button>
             </div>
-            
+
             <p className="hidden md:block text-center text-[10px] font-bold text-muted-foreground uppercase tracking-widest opacity-60">
               Safe & Secure · 256-bit SSL Encryption
             </p>
@@ -416,7 +422,7 @@ export default function Checkout() {
                   </div>
                 ))}
               </div>
-              
+
               <div className="border-t border-border/30 pt-4 space-y-3 text-sm">
                 <div className="flex justify-between"><span className="text-muted-foreground">Subtotal</span><span className="font-medium">{formatPrice(total)}</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">Shipping</span><span className="font-medium">{shipping === 0 ? "Free" : formatPrice(shipping)}</span></div>
@@ -433,15 +439,15 @@ export default function Checkout() {
               <div className="border-t border-border/30 pt-6 mt-6">
                 <p className="text-[10px] font-black uppercase text-muted-foreground mb-3 ml-1 tracking-widest">Promotion Code</p>
                 <div className="flex gap-2">
-                  <input 
-                    type="text" 
+                  <input
+                    type="text"
                     value={promoCodeInput}
                     onChange={(e) => setPromoCodeInput(e.target.value)}
-                    placeholder="ENTER CODE" 
-                    className="flex-grow h-12 px-4 glass rounded-xl text-sm font-bold uppercase focus:outline-none focus:ring-2 focus:ring-primary/30 border-0 shadow-inner" 
+                    placeholder="ENTER CODE"
+                    className="flex-grow h-12 px-4 glass rounded-xl text-sm font-bold uppercase focus:outline-none focus:ring-2 focus:ring-primary/30 border-0 shadow-inner"
                   />
                   <Button type="button" onClick={handleApplyPromo} disabled={isApplyingPromo} variant="outline" className="h-12 w-20 text-xs font-bold rounded-xl glass hover:bg-primary/10 border border-primary/20">
-                    {isApplyingPromo ? <Loader2 className="w-4 h-4 animate-spin"/> : "APPLY"}
+                    {isApplyingPromo ? <Loader2 className="w-4 h-4 animate-spin" /> : "APPLY"}
                   </Button>
                 </div>
               </div>
@@ -459,18 +465,18 @@ export default function Checkout() {
               <p className="text-xl font-heading font-black">{formatPrice(grandTotal)}</p>
             </div>
             <div className="text-right">
-               <p className="text-[10px] font-bold text-primary animate-pulse uppercase tracking-tighter">Secure Payment</p>
-               <img src="https://upload.wikimedia.org/wikipedia/commons/8/89/Razorpay_logo.svg" alt="Razorpay" className="h-3 ml-auto opacity-70" />
+              <p className="text-[10px] font-bold text-primary animate-pulse uppercase tracking-tighter">Secure Payment</p>
+              <img src="https://upload.wikimedia.org/wikipedia/commons/8/89/Razorpay_logo.svg" alt="Razorpay" className="h-3 ml-auto opacity-70" />
             </div>
           </div>
-          <Button 
-            onClick={(e) => handleSubmit(e as any)} 
+          <Button
+            onClick={(e) => handleSubmit(e as any)}
             disabled={isProcessing}
             className="w-full h-14 text-base font-black gradient-primary border-0 rounded-2xl shadow-xl active:scale-95 transition-all"
           >
             {isProcessing ? (
               <span className="flex items-center gap-2">
-                <Loader2 className="w-4 h-4 animate-spin" /> Preparing... 
+                <Loader2 className="w-4 h-4 animate-spin" /> Preparing...
               </span>
             ) : "Complete Purchase"}
           </Button>

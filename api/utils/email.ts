@@ -11,26 +11,31 @@ import type { Transporter } from "nodemailer";
  * Throws a clear error if credentials are missing instead of silently
  * falling back to Ethereal (which would swallow production emails).
  */
-const getTransporter = (): Transporter => {
+
+// Standard LYRA store email layout
+export const sendStoreEmail = async (to: string, subject: string, htmlContent: string): Promise<string | null> => {
+    let transporter: Transporter;
+    let isEthereal = false;
+
     const user = process.env.EMAIL_USER;
     const pass = process.env.EMAIL_APP_PASSWORD;
 
-    if (!user || !pass) {
-        throw new Error(
-            "Email credentials not configured. " +
-            "Set EMAIL_USER and EMAIL_APP_PASSWORD in Vercel environment variables."
-        );
+    if (user && pass) {
+        transporter = nodemailer.createTransport({
+            service: "gmail",
+            auth: { user, pass },
+        });
+    } else {
+        console.warn("[Email] Gmail credentials missing. Falling back to Ethereal...");
+        const account = await nodemailer.createTestAccount();
+        transporter = nodemailer.createTransport({
+            host: account.smtp.host,
+            port: account.smtp.port,
+            secure: account.smtp.secure,
+            auth: { user: account.user, pass: account.pass },
+        });
+        isEthereal = true;
     }
-
-    return nodemailer.createTransport({
-        service: "gmail",
-        auth: { user, pass },
-    });
-};
-
-// Standard LYRA store email layout
-export const sendStoreEmail = async (to: string, subject: string, htmlContent: string): Promise<void> => {
-    const transporter = getTransporter();
 
     const layout = `
     <div style="max-width: 600px; margin: 0 auto; font-family: Helvetica, sans-serif; color: #000; border: 1px solid #eaeaea; border-radius: 8px; overflow: hidden;">
@@ -55,4 +60,12 @@ export const sendStoreEmail = async (to: string, subject: string, htmlContent: s
     });
 
     console.log(`[Email] Sent to ${to} | ID: ${info.messageId}`);
+
+    if (isEthereal) {
+        const previewUrl = nodemailer.getTestMessageUrl(info);
+        console.log(`[Email] Preview URL: ${previewUrl}`);
+        return previewUrl;
+    }
+
+    return null;
 };

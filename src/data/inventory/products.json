@@ -1,0 +1,1326 @@
+[
+  {
+    "id": "2BDzkerqfsdsf7TVEU2F",
+    "name": "Colourblock Pullover",
+    "price": 1899,
+    "category": "Kids",
+    "subCategory": "Hoodies",
+    "image": "https://images.unsplash.com/photo-1503919545889-aef636e10ad4?q=80&w=1974",
+    "images": [
+      "https://images.unsplash.com/photo-1503919545889-aef636e10ad4?q=80&w=1974"
+    ],
+    "description": "Cozy and vibrant colourblock hoodie with a kangaroo pocket. Durable cotton blend for active kids.",
+    "brand": "LYRA Mini",
+    "sizes": [
+      "4-5Y",
+      "6-7Y",
+      "8-9Y"
+    ],
+    "colors": [
+      "#eebb00"
+    ],
+    "inStock": true,
+    "isNew": false,
+    "isBestseller": false,
+    "createdAt": {
+      "_seconds": 1775065698,
+      "_nanoseconds": 699000000
+    },
+    "updatedAt": {
+      "_seconds": 1775065698,
+      "_nanoseconds": 699000000
+    }
+  },
+  {
+    "id": "fChTYaP953euJE9Gp317",
+    "name": "Everyday Stretch Chinos",
+    "price": 3299,
+    "category": "Men",
+    "subCategory": "Chinos",
+    "image": "https://images.unsplash.com/photo-1473966968600-fa801b869a1a?q=80&w=1974",
+    "images": [
+      "https://images.unsplash.com/photo-1473966968600-fa801b869a1a?q=80&w=1974"
+    ],
+    "description": "Slim-fit chinos engineered with a hint of stretch for mobility. Features a clean flat front and slanted pockets.",
+    "brand": "LYRA Core",
+    "sizes": [
+      "30",
+      "32",
+      "34",
+      "36"
+    ],
+    "colors": [
+      "#c3b091",
+      "#000080"
+    ],
+    "inStock": true,
+    "isNew": false,
+    "isBestseller": false,
+    "createdAt": {
+      "_seconds": 1775065698,
+      "_nanoseconds": 642000000
+    },
+    "updatedAt": {
+      "_seconds": 1775065698,
+      "_nanoseconds": 642000000
+    }
+  },
+  {
+    "id": "hoodie",
+    "isNew": true,
+    "isBestseller": true,
+    "ecoLabels": [],
+    "price": 999,
+    "name": "hoodie",
+    "inStock": true,
+    "category": "Men",
+    "brand": "LYRA",
+    "image": "",
+    "createdAt": {
+      "_seconds": 1776601909,
+      "_nanoseconds": 740000000
+    },
+    "images": [
+      "https://images.unsplash.com/photo-1549298916-b41d501d3772?q=80&w=2012&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1549298916-b41d501d3772?q=80&w=2012&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1549298916-b41d501d3772?q=80&w=2012&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1549298916-b41d501d3772?q=80&w=2012&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1549298916-b41d501d3772?q=80&w=2012&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1549298916-b41d501d3772?q=80&w=2012&auto=format&fit=crop"
+    ],
+    "subCategory": "outer",
+    "originalPrice": 1999,
+    "material": "100% timewaste",
+    "careInstructions": "Oopika unte uthuko",
+    "description": "em lee dolla",
+    "variants": [
+      {
+        "color": "Standard",
+        "colorHex": "#000000",
+        "sizes": [
+          "S",
+          "M",
+          "L",
+          "XL"
+        ],
+        "stock": 10
+      }
+    ],
+    "updatedAt": {
+      "_seconds": 1776601909,
+      "_nanoseconds": 740000000
+    }
+  },
+  {
+    "id": "m-hoodie-1",
+    "image": "https://images.unsplash.com/photo-1556821840-3a63f95609a7?q=80&w=1974",
+    "subCategory": "Hoodies",
+    "originalPrice": 4999,
+    "description": "Premium 400gsm cotton fleece hoodie with a relaxed fit. Features a double-lined hood and dropped shoulders for ultimate comfort.",
+    "isNew": false,
+    "variants": [
+      {
+        "color": "Navy Blue",
+        "colorHex": "#1a365d",
+        "sizes": [
+          "S",
+          "M",
+          "L",
+          "XL"
+        ]
+      },
+      {
+        "color": "Black",
+        "colorHex": "#000000",
+        "sizes": [
+          "S",
+          "M",
+          "L",
+          "XL",
+          "XXL"
+        ]
+      }
+    ],
+    "isBestseller": true,
+    "colors": [
+      "#1a365d",
+      "#000000"
+    ],
+    "material": "100% Organic Cotton",
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL",
+      "XXL"
+    ],
+    "price": 3499,
+    "name": "Essential Heavyweight Hoodie",
+    "inStock": true,
+    "category": "Men",
+    "brand": "LYRA Core",
+    "createdAt": {
+      "_seconds": 1775066115,
+      "_nanoseconds": 530000000
+    },
+    "images": [
+      "https://images.unsplash.com/photo-1556821840-3a63f95609a7?q=80&w=1974",
+      "https://images.unsplash.com/photo-1556821921-252370366914?q=80&w=1974"
+    ],
+    "updatedAt": {
+      "_seconds": 1775066115,
+      "_nanoseconds": 530000000
+    }
+  },
+  {
+    "id": "m-shirt-1",
+    "image": "https://images.unsplash.com/photo-1596755094514-f87e34085b2c?q=80&w=1976",
+    "subCategory": "Shirts",
+    "originalPrice": null,
+    "description": "A timeless Oxford shirt cut from breathable pure cotton. Tailored for a smart-casual silhouette.",
+    "isNew": false,
+    "variants": [
+      {
+        "color": "Light Blue",
+        "colorHex": "#add8e6",
+        "sizes": [
+          "S",
+          "M",
+          "L",
+          "XL"
+        ]
+      },
+      {
+        "color": "White",
+        "colorHex": "#ffffff",
+        "sizes": [
+          "S",
+          "M",
+          "L"
+        ]
+      }
+    ],
+    "isBestseller": false,
+    "colors": [
+      "#add8e6",
+      "#ffffff"
+    ],
+    "material": "100% Cotton",
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL"
+    ],
+    "price": 2899,
+    "name": "Oxford Button-Down Shirt",
+    "inStock": true,
+    "category": "Men",
+    "brand": "LYRA Tailored",
+    "createdAt": {
+      "_seconds": 1775066115,
+      "_nanoseconds": 581000000
+    },
+    "images": [
+      "https://images.unsplash.com/photo-1596755094514-f87e34085b2c?q=80&w=1976",
+      "https://images.unsplash.com/photo-1603252109303-2751441dd15e?q=80&w=1974"
+    ],
+    "updatedAt": {
+      "_seconds": 1775066115,
+      "_nanoseconds": 581000000
+    }
+  },
+  {
+    "id": "prod_a_bag_06",
+    "image": "https://images.unsplash.com/photo-1584916201218-f4242ceb4809?q=80&w=736",
+    "images": [
+      "https://images.unsplash.com/photo-1584916201218-f4242ceb4809?q=80&w=736"
+    ],
+    "subCategory": "Bags",
+    "originalPrice": null,
+    "description": "Structured minimalism at its finest. Handcrafted from vegetable-tanned Italian leather with matte black hardware.",
+    "isNew": true,
+    "variants": [
+      {
+        "color": "Saddle",
+        "colorHex": "#8B4513",
+        "sizes": [
+          "One Size"
+        ],
+        "stock": 8
+      },
+      {
+        "color": "Onyx",
+        "colorHex": "#000000",
+        "sizes": [
+          "One Size"
+        ],
+        "stock": 5
+      }
+    ],
+    "isBestseller": false,
+    "colors": [
+      "#8B4513",
+      "#000000"
+    ],
+    "material": "Full-Grain Italian Leather",
+    "sizes": [
+      "One Size"
+    ],
+    "price": 55000,
+    "name": "Architectural Leather Tote",
+    "inStock": true,
+    "category": "Accessories",
+    "brand": "LYRA Leather",
+    "careInstructions": "Condition leather bi-annually.",
+    "ecoLabels": [
+      "Vegetable Tanned",
+      "Zero Plastic"
+    ],
+    "createdAt": {
+      "_seconds": 1776600117,
+      "_nanoseconds": 740000000
+    },
+    "updatedAt": {
+      "_seconds": 1776600117,
+      "_nanoseconds": 740000000
+    }
+  },
+  {
+    "id": "prod_a_belt_18",
+    "image": "https://images.unsplash.com/photo-1624222247344-550fb60583dc?q=80&w=736",
+    "images": [
+      "https://images.unsplash.com/photo-1624222247344-550fb60583dc?q=80&w=736"
+    ],
+    "subCategory": "Belts",
+    "originalPrice": null,
+    "description": "A seamless transition from business to casual. This reversible belt features a sleek, frictionless locking mechanism.",
+    "isNew": false,
+    "isBestseller": false,
+    "colors": [
+      "#3b2f2f"
+    ],
+    "material": "Full-Grain Cowhide",
+    "sizes": [
+      "S",
+      "M",
+      "L"
+    ],
+    "price": 8000,
+    "name": "Minimalist Reversible Belt",
+    "inStock": true,
+    "category": "Accessories",
+    "brand": "LYRA Accessories",
+    "careInstructions": "Wipe clean with a damp cloth.",
+    "ecoLabels": [
+      "Zero Plastic"
+    ],
+    "createdAt": {
+      "_seconds": 1776600121,
+      "_nanoseconds": 908000000
+    },
+    "variants": [
+      {
+        "color": "Black / Brown",
+        "colorHex": "#3b2f2f",
+        "sizes": [
+          "S",
+          "M",
+          "L"
+        ],
+        "stock": 31
+      }
+    ],
+    "updatedAt": {
+      "_seconds": 1776622187,
+      "_nanoseconds": 277000000
+    }
+  },
+  {
+    "id": "prod_a_glasses_09",
+    "image": "https://images.unsplash.com/photo-1511499767150-a48a237f0083?q=80&w=736",
+    "images": [
+      "https://images.unsplash.com/photo-1511499767150-a48a237f0083?q=80&w=736"
+    ],
+    "subCategory": "Eyewear",
+    "originalPrice": null,
+    "description": "Ultralight titanium aviators featuring 100% UV protection polarized lenses. The frame bends and snaps back to hold its shape perfectly.",
+    "isNew": false,
+    "variants": [
+      {
+        "color": "Gold / Green",
+        "colorHex": "#FFD700",
+        "sizes": [
+          "Standard"
+        ],
+        "stock": 22
+      }
+    ],
+    "isBestseller": false,
+    "colors": [
+      "#FFD700"
+    ],
+    "material": "Titanium / Polycarbonate Lenses",
+    "sizes": [
+      "Standard"
+    ],
+    "price": 18500,
+    "name": "Aeroline Aviator Sunglasses",
+    "inStock": true,
+    "category": "Accessories",
+    "brand": "LYRA Optics",
+    "careInstructions": "Store in provided hard case.",
+    "ecoLabels": [],
+    "createdAt": {
+      "_seconds": 1776600118,
+      "_nanoseconds": 786000000
+    },
+    "updatedAt": {
+      "_seconds": 1776600118,
+      "_nanoseconds": 786000000
+    }
+  },
+  {
+    "id": "prod_a_wallet_13",
+    "image": "https://images.unsplash.com/photo-1627123424574-724758594e93?q=80&w=736",
+    "images": [
+      "https://images.unsplash.com/photo-1627123424574-724758594e93?q=80&w=736"
+    ],
+    "subCategory": "Wallets",
+    "originalPrice": null,
+    "description": "An incredibly slim and durable card box capable of carrying up to 6 cards. Shields against RFID scanning data theft.",
+    "isNew": true,
+    "variants": [
+      {
+        "color": "Carbon Matte",
+        "colorHex": "#111111",
+        "sizes": [
+          "One Size"
+        ],
+        "stock": 80
+      }
+    ],
+    "isBestseller": false,
+    "colors": [
+      "#111111"
+    ],
+    "material": "Matte Carbon Fiber",
+    "sizes": [
+      "One Size"
+    ],
+    "price": 4500,
+    "name": "Carbon Fiber Cardholder",
+    "inStock": true,
+    "category": "Accessories",
+    "brand": "LYRA Leather",
+    "careInstructions": "No maintenance required.",
+    "ecoLabels": [
+      "Upcycled Materials"
+    ],
+    "createdAt": {
+      "_seconds": 1776600119,
+      "_nanoseconds": 700000000
+    },
+    "updatedAt": {
+      "_seconds": 1776600119,
+      "_nanoseconds": 700000000
+    }
+  },
+  {
+    "id": "prod_a_watch_03",
+    "image": "https://images.unsplash.com/photo-1523275335684-37898b6baf30?q=80&w=736",
+    "images": [
+      "https://images.unsplash.com/photo-1523275335684-37898b6baf30?q=80&w=736"
+    ],
+    "subCategory": "Watches",
+    "originalPrice": null,
+    "description": "Aerospace-grade titanium chassis housing a 45-jewel automatic movement. Scratch-resistant sapphire crystal and an integrated obsidian silicone strap.",
+    "isNew": true,
+    "variants": [
+      {
+        "color": "Gunmetal",
+        "colorHex": "#2A3439",
+        "sizes": [
+          "One Size"
+        ],
+        "stock": 3
+      }
+    ],
+    "isBestseller": false,
+    "colors": [
+      "#2A3439"
+    ],
+    "material": "Grade 5 Titanium / Sapphire Crystal",
+    "sizes": [
+      "One Size"
+    ],
+    "price": 125000,
+    "name": "Monolith Titanium Chronograph",
+    "inStock": true,
+    "category": "Accessories",
+    "brand": "LYRA Timepieces",
+    "careInstructions": "Wipe with microfiber cloth.",
+    "ecoLabels": [
+      "Carbon Neutral Shipping"
+    ],
+    "createdAt": {
+      "_seconds": 1776600116,
+      "_nanoseconds": 734000000
+    },
+    "updatedAt": {
+      "_seconds": 1776600116,
+      "_nanoseconds": 734000000
+    }
+  },
+  {
+    "id": "prod_k_dress_14",
+    "image": "https://images.unsplash.com/photo-1622290291468-a28f7a7dc6a8?q=80&w=736",
+    "images": [
+      "https://images.unsplash.com/photo-1622290291468-a28f7a7dc6a8?q=80&w=736"
+    ],
+    "subCategory": "Dresses",
+    "originalPrice": null,
+    "description": "A breezy, hand-embroidered smock dress perfect for summer days. Features delicate scalloped hems and stretchy shoulder ruffles.",
+    "isNew": false,
+    "variants": [
+      {
+        "color": "Blush",
+        "colorHex": "#DE5D83",
+        "sizes": [
+          "2Y",
+          "4Y",
+          "6Y",
+          "8Y"
+        ],
+        "stock": 18
+      }
+    ],
+    "isBestseller": false,
+    "colors": [
+      "#DE5D83"
+    ],
+    "material": "100% Organic Cotton",
+    "sizes": [
+      "2Y",
+      "4Y",
+      "6Y",
+      "8Y"
+    ],
+    "price": 4200,
+    "name": "Floral Cotton Smock",
+    "inStock": true,
+    "category": "Kids",
+    "brand": "LYRA Kids",
+    "careInstructions": "Machine wash delicate.",
+    "ecoLabels": [
+      "Organic Cotton",
+      "Fair Trade"
+    ],
+    "createdAt": {
+      "_seconds": 1776600120,
+      "_nanoseconds": 83000000
+    },
+    "updatedAt": {
+      "_seconds": 1776600120,
+      "_nanoseconds": 83000000
+    }
+  },
+  {
+    "id": "prod_m_hoodie_15",
+    "image": "https://images.unsplash.com/photo-1596755094514-f87e34085b2c?q=80&w=736",
+    "images": [
+      "https://images.unsplash.com/photo-1596755094514-f87e34085b2c?q=80&w=736"
+    ],
+    "subCategory": "Knitwear",
+    "originalPrice": null,
+    "description": "Cut from ultra-dense 500gsm french terry cotton. This hoodie features a dropped shoulder and an oversized silhouette.",
+    "isNew": true,
+    "isBestseller": false,
+    "colors": [
+      "#222222",
+      "#E3DAC9"
+    ],
+    "material": "100% Cotton [500 GSM]",
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL",
+      "XXL"
+    ],
+    "price": 8900,
+    "name": "Heavyweight Box-Fit Hoodie",
+    "inStock": true,
+    "category": "Men",
+    "brand": "LYRA Street",
+    "careInstructions": "Machine wash cold inside out.",
+    "ecoLabels": [
+      "Durable Construction"
+    ],
+    "createdAt": {
+      "_seconds": 1776600120,
+      "_nanoseconds": 298000000
+    },
+    "variants": [
+      {
+        "color": "Washed Black",
+        "colorHex": "#222222",
+        "sizes": [
+          "S",
+          "M",
+          "L",
+          "XL",
+          "XXL"
+        ],
+        "stock": 55
+      },
+      {
+        "color": "Bone",
+        "colorHex": "#E3DAC9",
+        "sizes": [
+          "M",
+          "L",
+          "XL"
+        ],
+        "stock": 20
+      }
+    ],
+    "updatedAt": {
+      "_seconds": 1776600120,
+      "_nanoseconds": 298000000
+    }
+  },
+  {
+    "id": "prod_m_jacket_01",
+    "image": "https://images.unsplash.com/photo-1591047139829-d91aecb6caea?q=80&w=736",
+    "images": [
+      "https://images.unsplash.com/photo-1591047139829-d91aecb6caea?q=80&w=736"
+    ],
+    "subCategory": "Outerwear",
+    "originalPrice": null,
+    "description": "A water-repellent, cyberpunk-inspired trench coat engineered from advanced synthetic polymers. Features magnetic snap closures and hidden compartmentalized pockets. Draped elegantly for brutalist minimalism.",
+    "isNew": true,
+    "isBestseller": false,
+    "colors": [
+      "#0D0D0D"
+    ],
+    "material": "Poly-Nylon Blend / GORE-TEX",
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL"
+    ],
+    "price": 34500,
+    "name": "Obsidian Tech-Trench",
+    "inStock": true,
+    "category": "Men",
+    "brand": "LYRA Atelier",
+    "careInstructions": "Dry clean only. Do not tumble dry.",
+    "variants": [
+      {
+        "color": "Obsidian Black",
+        "colorHex": "#0D0D0D",
+        "sizes": [
+          "S",
+          "M",
+          "L",
+          "XL"
+        ],
+        "stock": 15
+      }
+    ],
+    "ecoLabels": [
+      "Cruelty-Free",
+      "Low-Water Production"
+    ],
+    "createdAt": {
+      "_seconds": 1776600116,
+      "_nanoseconds": 410000000
+    },
+    "updatedAt": {
+      "_seconds": 1776600116,
+      "_nanoseconds": 410000000
+    }
+  },
+  {
+    "id": "prod_m_pant_05",
+    "image": "https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?q=80&w=736",
+    "images": [
+      "https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?q=80&w=736"
+    ],
+    "subCategory": "Trousers",
+    "originalPrice": null,
+    "description": "Tailored cargo pants crafted from Japanese ripstop cotton. Features articulated knees and concealed zip pockets.",
+    "isNew": false,
+    "isBestseller": false,
+    "colors": [
+      "#4B5320",
+      "#708090"
+    ],
+    "material": "100% Japanese Ripstop Cotton",
+    "sizes": [
+      "28",
+      "30",
+      "32",
+      "34",
+      "36"
+    ],
+    "price": 12000,
+    "name": "Utility Cargo Trousers",
+    "inStock": true,
+    "category": "Men",
+    "brand": "LYRA Street",
+    "careInstructions": "Machine wash cold, air dry.",
+    "variants": [
+      {
+        "color": "Olive Drab",
+        "colorHex": "#4B5320",
+        "sizes": [
+          "28",
+          "30",
+          "32",
+          "34",
+          "36"
+        ],
+        "stock": 40
+      },
+      {
+        "color": "Slate",
+        "colorHex": "#708090",
+        "sizes": [
+          "30",
+          "32",
+          "34"
+        ],
+        "stock": 15
+      }
+    ],
+    "ecoLabels": [
+      "Organic Cotton"
+    ],
+    "createdAt": {
+      "_seconds": 1776600117,
+      "_nanoseconds": 311000000
+    },
+    "updatedAt": {
+      "_seconds": 1776600117,
+      "_nanoseconds": 311000000
+    }
+  },
+  {
+    "id": "prod_m_shirt_07",
+    "image": "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?q=80&w=736",
+    "images": [
+      "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?q=80&w=736"
+    ],
+    "subCategory": "Shirts",
+    "originalPrice": null,
+    "description": "The ultimate white shirt. Mercerized for a subtle sheen and wrinkle resistance, featuring mother-of-pearl buttons.",
+    "isNew": false,
+    "isBestseller": false,
+    "colors": [
+      "#FFFFFF"
+    ],
+    "material": "100% Pima Cotton",
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL",
+      "XXL"
+    ],
+    "price": 4500,
+    "name": "Mercerized Cotton Button-Down",
+    "inStock": true,
+    "category": "Men",
+    "brand": "LYRA Essentials",
+    "careInstructions": "Machine wash warm, iron medium.",
+    "variants": [
+      {
+        "color": "Optic White",
+        "colorHex": "#FFFFFF",
+        "sizes": [
+          "S",
+          "M",
+          "L",
+          "XL",
+          "XXL"
+        ],
+        "stock": 60
+      }
+    ],
+    "ecoLabels": [
+      "Sustainable Farming"
+    ],
+    "createdAt": {
+      "_seconds": 1776600118,
+      "_nanoseconds": 306000000
+    },
+    "updatedAt": {
+      "_seconds": 1776600118,
+      "_nanoseconds": 306000000
+    }
+  },
+  {
+    "id": "prod_m_sneaker_11",
+    "image": "https://images.unsplash.com/photo-1600185365483-26d7a4cc7519?q=80&w=736",
+    "images": [
+      "https://images.unsplash.com/photo-1600185365483-26d7a4cc7519?q=80&w=736"
+    ],
+    "subCategory": "Shoes",
+    "originalPrice": null,
+    "description": "Next-generation streetwear sneakers constructed from synthetic flyknit. Features a shock-absorbing translucent midsole.",
+    "isNew": false,
+    "isBestseller": false,
+    "colors": [
+      "#E5E4E2"
+    ],
+    "material": "Vegan Leather / Flyknit",
+    "sizes": [
+      "us8",
+      "us9",
+      "us10",
+      "us11",
+      "us12"
+    ],
+    "price": 24000,
+    "name": "VFX Urban High-Tops",
+    "inStock": true,
+    "category": "Men",
+    "brand": "LYRA Footwear",
+    "careInstructions": "Wipe with damp cloth.",
+    "ecoLabels": [
+      "Vegan"
+    ],
+    "createdAt": {
+      "_seconds": 1776600119,
+      "_nanoseconds": 269000000
+    },
+    "variants": [
+      {
+        "color": "Phantom",
+        "colorHex": "#E5E4E2",
+        "sizes": [
+          "us8",
+          "us9",
+          "us10",
+          "us11",
+          "us12"
+        ],
+        "stock": 29
+      }
+    ],
+    "updatedAt": {
+      "_seconds": 1776618008,
+      "_nanoseconds": 129000000
+    }
+  },
+  {
+    "id": "prod_m_suit_17",
+    "image": "https://images.unsplash.com/photo-1593030761757-71fae45fa0e7?q=80&w=736",
+    "images": [
+      "https://images.unsplash.com/photo-1593030761757-71fae45fa0e7?q=80&w=736"
+    ],
+    "subCategory": "Suits",
+    "originalPrice": null,
+    "description": "Immaculate tailoring and a modern slim cut. Tailored from a super 120s Italian wool twill. Fully canvassed jacket with horn buttons.",
+    "isNew": true,
+    "variants": [
+      {
+        "color": "Midnight Blue",
+        "colorHex": "#003366",
+        "sizes": [
+          "38R",
+          "40R",
+          "42R",
+          "44R"
+        ],
+        "stock": 10
+      }
+    ],
+    "isBestseller": false,
+    "colors": [
+      "#003366"
+    ],
+    "material": "100% Italian Virgin Wool",
+    "sizes": [
+      "38R",
+      "40R",
+      "42R",
+      "44R"
+    ],
+    "price": 85000,
+    "name": "The 3-Piece Executive Silhouette",
+    "inStock": true,
+    "category": "Men",
+    "brand": "LYRA Atelier",
+    "careInstructions": "Professional dry clean only.",
+    "ecoLabels": [],
+    "createdAt": {
+      "_seconds": 1776600121,
+      "_nanoseconds": 341000000
+    },
+    "updatedAt": {
+      "_seconds": 1776600121,
+      "_nanoseconds": 341000000
+    }
+  },
+  {
+    "id": "prod_w_dress_02",
+    "image": "https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?q=80&w=736",
+    "images": [
+      "https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?q=80&w=736"
+    ],
+    "subCategory": "Dresses",
+    "originalPrice": null,
+    "description": "Ethically sourced Mongolian cashmere midi dress. Features a sophisticated deep V-neck and a flowing, body-conscious architecture.",
+    "isNew": false,
+    "variants": [
+      {
+        "color": "Ivory",
+        "colorHex": "#FFFFF0",
+        "sizes": [
+          "XS",
+          "S",
+          "M"
+        ],
+        "stock": 8
+      },
+      {
+        "color": "Charcoal",
+        "colorHex": "#36454F",
+        "sizes": [
+          "XS",
+          "S",
+          "M",
+          "L"
+        ],
+        "stock": 12
+      }
+    ],
+    "isBestseller": false,
+    "colors": [
+      "#FFFFF0",
+      "#36454F"
+    ],
+    "material": "100% Mongolian Cashmere",
+    "sizes": [
+      "XS",
+      "S",
+      "M",
+      "L"
+    ],
+    "price": 42000,
+    "name": "Cashmere Silhouette Midi",
+    "inStock": true,
+    "category": "Women",
+    "brand": "LYRA Essentials",
+    "careInstructions": "Hand wash cold, lay flat to dry.",
+    "ecoLabels": [
+      "Ethically Sourced",
+      "Biodegradable"
+    ],
+    "createdAt": {
+      "_seconds": 1776600116,
+      "_nanoseconds": 506000000
+    },
+    "updatedAt": {
+      "_seconds": 1776600116,
+      "_nanoseconds": 506000000
+    }
+  },
+  {
+    "id": "prod_w_jacket_08",
+    "subCategory": "Outerwear",
+    "originalPrice": null,
+    "description": "Power dressing redefined. An expertly tailored blazer featuring strong shoulders, a cinched waist, and woven from worsted wool.",
+    "isNew": true,
+    "variants": [
+      {
+        "color": "Camel",
+        "colorHex": "#C19A6B",
+        "sizes": [
+          "XS",
+          "S",
+          "M",
+          "L"
+        ],
+        "stock": 12
+      },
+      {
+        "color": "Navy",
+        "colorHex": "#000080",
+        "sizes": [
+          "S",
+          "M",
+          "L"
+        ],
+        "stock": 8
+      }
+    ],
+    "isBestseller": false,
+    "colors": [
+      "#C19A6B",
+      "#000080"
+    ],
+    "material": "100% Worsted Wool",
+    "sizes": [
+      "XS",
+      "S",
+      "M",
+      "L"
+    ],
+    "price": 28000,
+    "name": "Sculpted Wool Blazer",
+    "inStock": true,
+    "category": "Women",
+    "brand": "LYRA Atelier",
+    "careInstructions": "Professional dry clean.",
+    "ecoLabels": [
+      "Cruelty-Free Wool"
+    ],
+    "image": "https://images.unsplash.com/photo-1548142813-c348350df52b?q=80&w=736",
+    "createdAt": {
+      "_seconds": 1776600118,
+      "_nanoseconds": 536000000
+    },
+    "images": [
+      "https://images.unsplash.com/photo-1548142813-c348350df52b?q=80&w=736"
+    ],
+    "updatedAt": {
+      "_seconds": 1776600118,
+      "_nanoseconds": 536000000
+    }
+  },
+  {
+    "id": "prod_w_knit_04",
+    "image": "https://images.unsplash.com/photo-1620799140408-edc6dcb6d633?q=80&w=736",
+    "images": [
+      "https://images.unsplash.com/photo-1620799140408-edc6dcb6d633?q=80&w=736"
+    ],
+    "subCategory": "Knitwear",
+    "originalPrice": null,
+    "description": "An exceptionally soft, oversized turtleneck spun from a proprietary alpaca and silk blend. Lightweight yet tremendously insulating.",
+    "isNew": false,
+    "variants": [
+      {
+        "color": "Mist Grey",
+        "colorHex": "#B0BEC5",
+        "sizes": [
+          "XS",
+          "S",
+          "M",
+          "L",
+          "XL"
+        ],
+        "stock": 25
+      }
+    ],
+    "isBestseller": false,
+    "colors": [
+      "#B0BEC5"
+    ],
+    "material": "70% Baby Alpaca, 30% Silk",
+    "sizes": [
+      "XS",
+      "S",
+      "M",
+      "L",
+      "XL"
+    ],
+    "price": 8500,
+    "name": "Cloud-Knit Turtleneck",
+    "inStock": true,
+    "category": "Women",
+    "brand": "LYRA",
+    "careInstructions": "Dry clean.",
+    "ecoLabels": [
+      "Fair Trade",
+      "Natural Fibers"
+    ],
+    "createdAt": {
+      "_seconds": 1776600117,
+      "_nanoseconds": 0
+    },
+    "updatedAt": {
+      "_seconds": 1776600117,
+      "_nanoseconds": 0
+    }
+  },
+  {
+    "id": "prod_w_pant_12",
+    "image": "https://images.unsplash.com/photo-1509631179647-0177331693ae?q=80&w=736",
+    "images": [
+      "https://images.unsplash.com/photo-1509631179647-0177331693ae?q=80&w=736"
+    ],
+    "subCategory": "Trousers",
+    "originalPrice": null,
+    "description": "Effortlessly elegant trousers featuring a dramatically wide leg and a high paper-bag waist. Woven from rich Mulberry silk.",
+    "isNew": false,
+    "variants": [
+      {
+        "color": "Midnight",
+        "colorHex": "#191970",
+        "sizes": [
+          "XS",
+          "S",
+          "M",
+          "L"
+        ],
+        "stock": 0
+      }
+    ],
+    "isBestseller": false,
+    "colors": [
+      "#191970"
+    ],
+    "material": "100% Mulberry Silk",
+    "sizes": [
+      "XS",
+      "S",
+      "M",
+      "L"
+    ],
+    "price": 18000,
+    "name": "Silk Wide-Leg Trousers",
+    "category": "Women",
+    "brand": "LYRA Essentials",
+    "careInstructions": "Dry clean only.",
+    "ecoLabels": [
+      "Natural Fibers"
+    ],
+    "createdAt": {
+      "_seconds": 1776600119,
+      "_nanoseconds": 466000000
+    },
+    "inStock": false,
+    "updatedAt": {
+      "_seconds": 1776600119,
+      "_nanoseconds": 466000000
+    }
+  },
+  {
+    "id": "prod_w_shoes_19",
+    "image": "https://images.unsplash.com/photo-1543163521-1bf539c55dd2?q=80&w=736",
+    "images": [
+      "https://images.unsplash.com/photo-1543163521-1bf539c55dd2?q=80&w=736"
+    ],
+    "subCategory": "Shoes",
+    "description": "A masterclass in geometry. These stilettos feature a transparent lucite heel and sleek patent leather strapping.",
+    "isNew": true,
+    "variants": [
+      {
+        "color": "Crimson",
+        "colorHex": "#DC143C",
+        "sizes": [
+          "us5",
+          "us6",
+          "us7",
+          "us8",
+          "us9"
+        ],
+        "stock": 0
+      }
+    ],
+    "colors": [
+      "#DC143C"
+    ],
+    "material": "Patent Leather / Lucite",
+    "sizes": [
+      "us5",
+      "us6",
+      "us7",
+      "us8",
+      "us9"
+    ],
+    "price": 28000,
+    "name": "Architectural Stiletto",
+    "category": "Women",
+    "brand": "LYRA Footwear",
+    "careInstructions": "Store in dust bags provided.",
+    "ecoLabels": [],
+    "createdAt": {
+      "_seconds": 1776600122,
+      "_nanoseconds": 422000000
+    },
+    "originalPrice": 35000,
+    "inStock": true,
+    "isBestseller": true,
+    "updatedAt": {
+      "_seconds": 1776600225,
+      "_nanoseconds": 349000000
+    }
+  },
+  {
+    "id": "prod_w_swim_16",
+    "subCategory": "Swimwear",
+    "originalPrice": null,
+    "description": "A striking, sculptural swimsuit designed with a daring off-the-shoulder cut and flattering ruching on the torso.",
+    "isNew": false,
+    "variants": [
+      {
+        "color": "Onyx",
+        "colorHex": "#000000",
+        "sizes": [
+          "XS",
+          "S",
+          "M",
+          "L"
+        ],
+        "stock": 12
+      }
+    ],
+    "isBestseller": false,
+    "colors": [
+      "#000000"
+    ],
+    "material": "78% Recycled Polyamide, 22% Elastane",
+    "sizes": [
+      "XS",
+      "S",
+      "M",
+      "L"
+    ],
+    "price": 9500,
+    "name": "Asymmetrical One-Piece",
+    "inStock": true,
+    "category": "Women",
+    "brand": "LYRA",
+    "careInstructions": "Hand wash cold immediately after use.",
+    "ecoLabels": [
+      "Recycled Ocean Plastics"
+    ],
+    "image": "https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?q=80&w=736",
+    "createdAt": {
+      "_seconds": 1776600121,
+      "_nanoseconds": 18000000
+    },
+    "images": [
+      "https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?q=80&w=736"
+    ],
+    "updatedAt": {
+      "_seconds": 1776600121,
+      "_nanoseconds": 18000000
+    }
+  },
+  {
+    "id": "w-hoodie-1",
+    "image": "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=1962",
+    "subCategory": "Hoodies",
+    "originalPrice": null,
+    "description": "Soft fleece zip-up with a flattering cropped length and oversized hood. Perfect for layering.",
+    "isNew": true,
+    "variants": [
+      {
+        "color": "Powder Blue",
+        "colorHex": "#b0e0e6",
+        "sizes": [
+          "XS",
+          "S",
+          "M",
+          "L"
+        ]
+      },
+      {
+        "color": "Cream",
+        "colorHex": "#fffdd0",
+        "sizes": [
+          "XS",
+          "S",
+          "M"
+        ]
+      }
+    ],
+    "isBestseller": false,
+    "colors": [
+      "#b0e0e6",
+      "#fffdd0"
+    ],
+    "material": null,
+    "sizes": [
+      "XS",
+      "S",
+      "M",
+      "L"
+    ],
+    "price": 2999,
+    "name": "Cropped Zip-Up Hoodie",
+    "inStock": true,
+    "category": "Women",
+    "brand": "Active Era",
+    "createdAt": {
+      "_seconds": 1775066115,
+      "_nanoseconds": 659000000
+    },
+    "images": [
+      "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=1962",
+      "https://images.unsplash.com/photo-1539109136881-3be0616acf4b?q=80&w=1974"
+    ],
+    "updatedAt": {
+      "_seconds": 1775066115,
+      "_nanoseconds": 659000000
+    }
+  },
+  {
+    "id": "w-jeans-1",
+    "image": "https://images.unsplash.com/photo-1541099649105-f69ad21f3246?q=80&w=1974",
+    "subCategory": "Jeans",
+    "originalPrice": 5999,
+    "description": "Classic straight-leg denim with a vintage faded wash and mid-rise waist. 100% organic cotton rigid denim.",
+    "isNew": false,
+    "variants": [
+      {
+        "color": "Vintage Blue",
+        "colorHex": "#5b7c99",
+        "sizes": [
+          "26",
+          "28",
+          "30",
+          "32"
+        ]
+      },
+      {
+        "color": "Washed Black",
+        "colorHex": "#2b2b2b",
+        "sizes": [
+          "26",
+          "28",
+          "30",
+          "32",
+          "34"
+        ]
+      }
+    ],
+    "isBestseller": false,
+    "colors": [
+      "#5b7c99",
+      "#2b2b2b"
+    ],
+    "material": "98% Cotton, 2% Elastane",
+    "sizes": [
+      "26",
+      "28",
+      "30",
+      "32",
+      "34"
+    ],
+    "price": 4999,
+    "name": "Vintage Wash Straight Jeans",
+    "inStock": true,
+    "category": "Women",
+    "brand": "LYRA Denim",
+    "createdAt": {
+      "_seconds": 1775066115,
+      "_nanoseconds": 592000000
+    },
+    "images": [
+      "https://images.unsplash.com/photo-1541099649105-f69ad21f3246?q=80&w=1974",
+      "https://images.unsplash.com/photo-1576905304918-028d7acc9990?q=80&w=1974"
+    ],
+    "updatedAt": {
+      "_seconds": 1775066115,
+      "_nanoseconds": 592000000
+    }
+  }
+]

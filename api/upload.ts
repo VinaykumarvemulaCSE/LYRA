@@ -1,9 +1,10 @@
 /**
  * Lyra Secure Image Upload API
  * ----------------------------
- * This serverless function securely uploads images to GitHub.
  * It uses the GITHUB_TOKEN from your environment variables safely.
  */
+import { verifyAdmin } from "./utils/auth";
+import { verifyCsrfToken } from "./utils/csrf";
 
 export const config = {
   api: {
@@ -16,6 +17,17 @@ export const config = {
 export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') {
     return res.status(405).json({ message: 'Method Not Allowed' });
+  }
+
+  // 1. Server-Side Authentication
+  const isAdmin = await verifyAdmin(req);
+  if (!isAdmin) {
+    return res.status(403).json({ message: "Forbidden: Admin privileges required." });
+  }
+
+  // 1.5 CSRF Protection
+  if (!verifyCsrfToken(req)) {
+    return res.status(403).json({ message: "CSRF token missing or invalid." });
   }
 
   const { content, path, fileName } = req.body;

@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { useRef, useCallback, useEffect, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { dataService, Product as FirestoreProduct } from "@/services/dataService";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -84,7 +84,7 @@ export default function Index() {
   }, [emblaApi, onSelect]);
 
   const [isHovered, setIsHovered] = useState(false);
-  const shouldReduceMotion = motion.useReducedMotion();
+  const shouldReduceMotion = useReducedMotion();
 
   useEffect(() => {
     if (!emblaApi || isHovered || shouldReduceMotion) return;

@@ -1,4 +1,4 @@
-import express, { Request, Response } from "express";
+import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
@@ -41,13 +41,23 @@ registerRoutes(app);
 const distPath = path.join(process.cwd(), "dist");
 
 if (fs.existsSync(distPath)) {
-  // Serve the exact Vite build (including Admin chunks) exclusively on Render
+  console.log(`[LYRA] Serving static files from: ${distPath}`);
   app.use(express.static(distPath));
-  app.get("*splat", (req: Request, res: Response) => {
+  
+  // High-compatibility catch-all for SPA routing
+  app.get(/.*/, (req: Request, res: Response, next: NextFunction) => {
+    // If it's an API call that somehow reached here, 404 it
     if (req.path.startsWith("/api")) {
       return res.status(404).json({ error: "API Route Not Found" });
     }
-    res.sendFile(path.join(distPath, "index.html"));
+    
+    // Send index.html for all other routes (SPA)
+    const indexPath = path.join(distPath, "index.html");
+    if (fs.existsSync(indexPath)) {
+      res.sendFile(indexPath);
+    } else {
+      next();
+    }
   });
 } else {
   // Fallback if built incrementally 

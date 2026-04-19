@@ -12,8 +12,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "dev:api": "tsx server/index.ts",
-    "build:server": "tsc -p tsconfig.server.json",
-    "start:server": "node dist-server/server/index.js"
+    "build:server": "echo Build complete - tsx runs TS directly",
+    "start:server": "node --import tsx/esm server/index.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

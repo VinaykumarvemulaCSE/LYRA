@@ -1,22 +1,11 @@
-import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { ArrowLeft, Trash2, Loader2 } from "lucide-react";
-import { dataService, Product as FirestoreProduct } from "@/services/dataService";
+import { useWishlist } from "@/context/WishlistContext";
 import ProductCard from "@/components/product/ProductCard";
 import { Button } from "@/components/ui/button";
 
 export default function Wishlist() {
-  const [wishlistItems, setWishlistItems] = useState<FirestoreProduct[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    // In a fully featured app, this would query based on a Wishlist Context or LocalStorage IDs.
-    // For now, loading dynamic items to populate the UI.
-    dataService.products.getAll().then(data => {
-      setWishlistItems(data.slice(2, 5));
-      setIsLoading(false);
-    }).catch(console.error);
-  }, []);
+  const { items: wishlistItems, isLoading, removeFromWishlist } = useWishlist();
 
   return (
     <main className="pt-24 pb-16 min-h-screen">
@@ -38,7 +27,11 @@ export default function Wishlist() {
               {wishlistItems.map((product, i) => (
                 <div key={product.id} className="relative group">
                   <ProductCard product={product} index={i} />
-                  <button className="absolute top-4 right-4 z-10 w-8 h-8 glass rounded-xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:text-destructive" aria-label="Remove from wishlist">
+                  <button 
+                    onClick={() => removeFromWishlist(product.id)}
+                    className="absolute top-4 right-4 z-10 w-8 h-8 glass rounded-xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:text-destructive" 
+                    aria-label="Remove from wishlist"
+                  >
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>

@@ -170,6 +170,10 @@ export const dataService = {
     async updateWishlist(uid: string, wishlist: any[]) {
       const ref = doc(db, "users", uid);
       return await updateDoc(ref, { wishlist, updatedAt: serverTimestamp() });
+    },
+    async updateProfile(uid: string, updates: Partial<UserProfile>) {
+      const ref = doc(db, "users", uid);
+      return await updateDoc(ref, { ...updates, updatedAt: serverTimestamp() });
     }
   },
 
@@ -180,6 +184,10 @@ export const dataService = {
         ...orderData,
         createdAt: serverTimestamp()
       });
+    },
+    async getById(id: string) {
+      const snap = await getDoc(doc(db, "orders", id));
+      return snap.exists() ? ({ id: snap.id, ...snap.data() } as Order) : null;
     },
     async getByUser(userId: string): Promise<Order[]> {
       const q = query(

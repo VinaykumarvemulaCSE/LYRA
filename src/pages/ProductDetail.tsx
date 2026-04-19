@@ -12,6 +12,7 @@ import { useCart } from "@/context/CartContext";
 import { useWishlist } from "@/context/WishlistContext";
 import ProductCard from "@/components/product/ProductCard";
 import ProductReviews from "@/components/product/ProductReviews";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Analytics } from "@/lib/analytics";
 import { Helmet } from "react-helmet-async";
 import { toast } from "sonner";
@@ -75,9 +76,26 @@ export default function ProductDetail() {
   if (loading) {
     return (
       <main className="pt-24 min-h-screen">
-        <div className="container py-20 flex flex-col items-center justify-center">
-            <Loader2 className="w-10 h-10 text-primary animate-spin mb-4" />
-            <p className="text-muted-foreground animate-pulse font-heading font-bold">Revealing the Boutique State...</p>
+        <div className="container py-6">
+          <Skeleton className="h-4 w-24 rounded-lg" />
+        </div>
+        <div className="container pb-16">
+          <div className="grid md:grid-cols-2 gap-8 md:gap-12 lg:gap-16">
+            <Skeleton className="aspect-[3/4] w-full rounded-[2.5rem]" />
+            <div className="space-y-6">
+              <Skeleton className="h-4 w-20 rounded-lg" />
+              <Skeleton className="h-12 w-3/4 rounded-xl" />
+              <Skeleton className="h-8 w-32 rounded-lg" />
+              <div className="space-y-4 pt-8">
+                <Skeleton className="h-4 w-full rounded-lg" />
+                <Skeleton className="h-4 w-5/6 rounded-lg" />
+              </div>
+              <div className="flex gap-4 pt-12">
+                <Skeleton className="h-14 flex-1 rounded-2xl" />
+                <Skeleton className="h-14 w-14 rounded-2xl" />
+              </div>
+            </div>
+          </div>
         </div>
       </main>
     );

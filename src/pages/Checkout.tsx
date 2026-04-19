@@ -164,6 +164,23 @@ export default function Checkout() {
               if (!verifyRes.ok) throw new Error(verifyData.message || "Payment verification failed");
 
               toast.success("Payment Successful!", { description: "Your order has been confirmed." });
+              
+              // 7. Save Address to User Profile for future use
+              if (user?.uid) {
+                dataService.users.getProfile(user.uid).then(profile => {
+                  if (profile) {
+                    const existingAddresses = profile.addresses || [];
+                    // Simple check: if this street address isn't already saved
+                    const isNew = !existingAddresses.some((a: any) => a.address === formData.address);
+                    if (isNew) {
+                      dataService.users.updateProfile(user.uid, {
+                        addresses: [...existingAddresses, formData]
+                      }).catch(e => console.warn("Failed to save address to profile", e));
+                    }
+                  }
+                });
+              }
+
               clearCart();
               navigate(`/order-confirmation?orderId=${createdOrder.id}`);
            } catch (err: unknown) {

@@ -256,7 +256,7 @@ export default function ProductDetail() {
             
             <h1 className="font-heading text-3xl md:text-4xl font-bold mb-4 leading-tight">{product.name}</h1>
             
-            <div className="flex items-center gap-4 mb-8">
+            <div className="flex items-center gap-4 mb-3">
               <span className="font-heading text-3xl font-bold text-primary">{formatPrice(product.price)}</span>
               {product.originalPrice && (
                 <div className="flex items-center gap-2">
@@ -267,6 +267,25 @@ export default function ProductDetail() {
                 </div>
               )}
             </div>
+
+            {/* Scarcity Badge */}
+            <AnimatePresence>
+              {variant.stock > 0 && variant.stock <= 5 && (
+                <motion.div 
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="mb-6"
+                >
+                  <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-500">
+                    <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                    <span className="text-[10px] font-black uppercase tracking-widest leading-none">
+                      Limited Selection: Only {variant.stock} units remaining
+                    </span>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {/* Selection Sections */}
             <div className="space-y-8 mb-10">

@@ -14,6 +14,7 @@ import { useAuth } from "@/context/AuthContext";
 import { dataService, Product as FirestoreProduct, Order, UserProfile, Promotion } from "@/services/dataService";
 import { githubService } from "@/services/githubService";
 import { products as staticProducts } from "@/data/products";
+import { API_ROUTES } from "@/lib/api-config";
 
 // ─── TYPES ────────────────────────────────────
 interface EditingProduct extends Partial<FirestoreProduct> { _isNew?: boolean; }
@@ -170,7 +171,7 @@ export default function Admin() {
     const order = dbOrders.find(o => o.id === orderId);
     
     if (status === "shipped" && order?.trackingNumber && order?.shippingAddress?.email) {
-      fetch("/api/shipping-email", {
+      fetch(API_ROUTES.SHIPPING_EMAIL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -192,7 +193,7 @@ export default function Admin() {
     const order = dbOrders.find(o => o.id === orderId);
     
     if (order?.status === "shipped" && order?.shippingAddress?.email) {
-      fetch("/api/shipping-email", {
+      fetch(API_ROUTES.SHIPPING_EMAIL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -238,7 +239,7 @@ export default function Admin() {
   const runDiagnostics = async () => {
     setIsCheckingDiag(true);
     try {
-      const res = await fetch("/api/system-diagnostics");
+      const res = await fetch(API_ROUTES.DIAGNOSTICS);
       const data = await res.json();
       setDiagResults(data);
       if (data.database.status === "connected") {

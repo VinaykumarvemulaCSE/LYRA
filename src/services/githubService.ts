@@ -5,6 +5,8 @@
  * No sensitive tokens are stored or used here in the frontend bundle.
  */
 
+import { API_ROUTES } from "@/lib/api-config";
+
 export const githubService = {
   /**
    * Securely upload an image to GitHub via the Serverless API
@@ -23,7 +25,7 @@ export const githubService = {
 
     try {
       // 2. Call our Serverless Upload Function
-      const response = await fetch("/api/upload", {
+      const response = await fetch(API_ROUTES.UPLOAD, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

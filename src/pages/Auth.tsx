@@ -18,6 +18,7 @@ import { auth, googleProvider } from "@/lib/firebase";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
 import { dataService } from "@/services/dataService";
+import { API_ROUTES } from "@/lib/api-config";
 
 declare global {
   interface Window {
@@ -193,7 +194,7 @@ export default function Auth() {
           }
           
           // --- NEW: TRIGGER WELCOME EMAIL ---
-          fetch("/api/welcome-email", {
+          fetch(API_ROUTES.WELCOME_EMAIL, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ email: identifier, firstName: name || "there" })

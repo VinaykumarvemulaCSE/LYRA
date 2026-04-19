@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Mail, Phone, MapPin, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { API_ROUTES } from "@/lib/api-config";
 
 export default function Contact() {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -18,7 +19,7 @@ export default function Contact() {
     setIsSubmitting(true);
     
     try {
-      const res = await fetch("/api/contact", {
+      const res = await fetch(API_ROUTES.CONTACT, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData)

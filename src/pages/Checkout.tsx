@@ -7,6 +7,7 @@ import { formatPrice } from "@/data/products";
 import { Button } from "@/components/ui/button";
 import { dataService } from "@/services/dataService";
 import { toast } from "sonner";
+import { API_ROUTES } from "@/lib/api-config";
 
 export default function Checkout() {
   const { items: contextItems, totalPrice: total, clearCart } = useCart();
@@ -118,7 +119,7 @@ export default function Checkout() {
       if (!res) throw new Error("Razorpay SDK failed to load. Are you online?");
 
       // 4. Request an Order from our Serverless Backend (throws on failure — no demo bypass)
-      const orderReq = await fetch("/api/razorpay-order", {
+      const orderReq = await fetch(API_ROUTES.RAZORPAY_ORDER, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ amount: grandTotal, receipt: createdOrder.id })
@@ -140,7 +141,7 @@ export default function Checkout() {
            try {
               // 6. Verify signature via Serverless API
               // Server-side handler also: updates order status, decrements stock, sends confirmation email
-              const verifyRes = await fetch("/api/razorpay-verify", {
+              const verifyRes = await fetch(API_ROUTES.RAZORPAY_VERIFY, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
